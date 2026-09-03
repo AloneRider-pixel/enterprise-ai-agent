@@ -1,0 +1,32 @@
+[
+  {
+    "question": "What is the refund policy for orders?",
+    "ground_truth": "We offer a 30-day refund policy. Orders must be in 'delivered' or 'shipped' status. Digital items are non-refundable after activation.",
+    "context": "Our refund policy allows customers to request a full refund within 30 days of purchase. Eligible order statuses are 'delivered' and 'shipped'. Digital items that have been activated cannot be refunded.",
+    "category": "policy"
+  },
+  {
+    "question": "How do I track my order ORD-002?",
+    "ground_truth": "Order ORD-002 is shipped via express. Tracking: TRK-987654321. Total: $2,499.95 for 5 Enterprise Licenses.",
+    "context": "Order ORD-002: Status shipped. Express shipping. Tracking TRK-987654321. Enterprise License x5 at $499.99. Total $2,499.95.",
+    "category": "order"
+  },
+  {
+    "question": "What are the API rate limits?",
+    "ground_truth": "Standard plan: 100 req/min. Enterprise: 1000 req/min. Contact support for higher limits.",
+    "context": "API Rate Limits: Standard: 100 req/min. Enterprise: 1000 req/min. Contact support@company.com for increases.",
+    "category": "technical"
+  },
+  {
+    "question": "What subscription plans are available?",
+    "ground_truth": "Starter ($29.99/mo), Pro ($99.99/mo), Enterprise ($499.99/mo/license).",
+    "context": "Plans: Starter $29.99/month, Pro $99.99/month, Enterprise $499.99/month per license.",
+    "category": "billing"
+  },
+  {
+    "question": "How do I reset my password?",
+    "ground_truth": "Go to login page, click Forgot Password, enter email, follow the reset link. Link expires in 24 hours.",
+    "context": "Password Reset: 1. Go to login page. 2. Click Forgot Password. 3. Enter email. 4. Follow reset link (expires in 24 hours).",
+    "category": "technical"
+  }
+]
