@@ -4,11 +4,10 @@ uvicorn[standard]==0.27.0
 pydantic==2.5.3
 pydantic-settings==2.1.0
 
-# ─── AI / LangChain / LangGraph ───
+# ─── AI / LangChain ───
 langchain==0.1.5
 langchain-openai==0.0.5
 langchain-community==0.0.17
-langgraph==0.1.16
 openai==1.10.0
 
 # ─── Vector Database ───
@@ -49,4 +48,3 @@ datasets==2.16.1
 pytest==7.4.4
 pytest-asyncio==0.23.3
 pytest-cov==4.1.0
-httpx==0.26.0
