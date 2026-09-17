@@ -1,5 +1,5 @@
-import re
 from collections.abc import Iterable
+import re
 
 from forgeai.models import Finding, RiskFactor, Severity
 from forgeai.services.github_client import PullRequestSnapshot
@@ -41,7 +41,10 @@ def analyze(snapshot: PullRequestSnapshot) -> tuple[list[Finding], list[RiskFact
                 severity=Severity.HIGH,
                 category="security",
                 title="Security-sensitive files changed",
-                detail="Authentication, authorization, identity, payments, or secret-handling code changed.",
+                detail=(
+                    "Authentication, authorization, identity, payments, or "
+                    "secret-handling code changed."
+                ),
                 paths=security_paths,
             )
         )
@@ -98,7 +101,10 @@ def analyze(snapshot: PullRequestSnapshot) -> tuple[list[Finding], list[RiskFact
                 severity=Severity.MEDIUM,
                 category="dependencies",
                 title="Dependency files changed",
-                detail="Dependency manifests or lockfiles changed and should be checked for compatibility.",
+                detail=(
+                    "Dependency manifests or lockfiles changed and should be "
+                    "checked for compatibility."
+                ),
                 paths=dependency_paths,
             )
         )
@@ -106,7 +112,10 @@ def analyze(snapshot: PullRequestSnapshot) -> tuple[list[Finding], list[RiskFact
             RiskFactor(
                 name="dependency_change",
                 points=10,
-                rationale="Dependency upgrades can change behavior or introduce supply-chain risk.",
+                rationale=(
+                    "Dependency upgrades can change behavior or introduce "
+                    "supply-chain risk."
+                ),
             )
         )
 
@@ -122,7 +131,10 @@ def analyze(snapshot: PullRequestSnapshot) -> tuple[list[Finding], list[RiskFact
                 severity=Severity.MEDIUM,
                 category="testing",
                 title="Source changes without visible test changes",
-                detail="Production code changed but the pull request does not include an obvious test path.",
+                detail=(
+                    "Production code changed but the pull request does not "
+                    "include an obvious test path."
+                ),
                 paths=source_paths[:25],
             )
         )
@@ -130,7 +142,10 @@ def analyze(snapshot: PullRequestSnapshot) -> tuple[list[Finding], list[RiskFact
             RiskFactor(
                 name="test_impact",
                 points=20,
-                rationale="Behavioral changes without accompanying tests deserve additional review.",
+                rationale=(
+                    "Behavioral changes without accompanying tests deserve "
+                    "additional review."
+                ),
             )
         )
 
