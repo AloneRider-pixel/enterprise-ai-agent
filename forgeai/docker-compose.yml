@@ -1,0 +1,9 @@
+services:
+  forgeai:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      FORGEAI_GITHUB_TOKEN: ${FORGEAI_GITHUB_TOKEN:-}
+      FORGEAI_GITHUB_API_BASE: ${FORGEAI_GITHUB_API_BASE:-https://api.github.com}
+      FORGEAI_REVIEW_GATE_THRESHOLD: ${FORGEAI_REVIEW_GATE_THRESHOLD:-70}
