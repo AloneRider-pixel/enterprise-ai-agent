@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Enterprise AI Agent CI
 
 on:
   push:
@@ -6,16 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
-  PYTHON_VERSION: "3.11"
-  NODE_VERSION: "20"
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
 
 jobs:
-  # ─── Backend Lint & Test ───
   backend-test:
-    name: Backend Tests
+    name: Backend lint and tests
     runs-on: ubuntu-latest
-    
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -26,11 +27,10 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U test_user -d test_db"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      
       redis:
         image: redis:7-alpine
         ports:
@@ -40,127 +40,67 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
       - name: Install dependencies
-        working-directory: ./backend
-        run: |
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio pytest-cov ruff
-
-      - name: Lint with ruff
-        working-directory: ./backend
+        working-directory: backend
+        run: python -m pip install -r requirements.txt
+      - name: Lint
+        working-directory: backend
         run: ruff check app/
-
-      - name: Run tests
-        working-directory: ./backend
+      - name: Test
+        working-directory: backend
         env:
           POSTGRES_HOST: localhost
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
           REDIS_HOST: localhost
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          APP_ENV: testing
-        run: |
-          pytest tests/ -v --cov=app --cov-report=xml
+          OPENAI_API_KEY: test-key
+          DEFAULT_ADMIN_PASSWORD: test-password
+          PYTHONPATH: .
+        run: python -m pytest tests/ -v --tb=short
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./backend/coverage.xml
-
-  # ─── Frontend Build ───
   frontend-build:
-    name: Frontend Build
+    name: Frontend build
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install dependencies
-        working-directory: ./frontend
+        working-directory: frontend
         run: npm ci
-
       - name: Build
-        working-directory: ./frontend
+        working-directory: frontend
         run: npm run build
 
-  # ─── Docker Build ───
   docker-build:
-    name: Docker Build
-    runs-on: ubuntu-latest
+    name: Docker builds
     needs: [backend-test, frontend-build]
-    if: github.ref == 'refs/heads/main'
-    
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build backend image
-        uses: docker/build-push-action@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: false
-          tags: enterprise-ai-agent-backend:latest
+          tags: enterprise-ai-agent-backend:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Build frontend image
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: false
-          tags: enterprise-ai-agent-frontend:latest
+          tags: enterprise-ai-agent-frontend:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  # ─── Deploy (main branch only) ───
-  deploy:
-    name: Deploy to AWS
-    runs-on: ubuntu-latest
-    needs: [docker-build]
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Login to ECR
-        id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push backend
-        env:
-          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          ECR_REPOSITORY: enterprise-ai-agent-backend
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./backend
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-      - name: Deploy to ECS
-        run: |
-          aws ecs update-service \
-            --cluster enterprise-ai-cluster \
-            --service enterprise-ai-service \
-            --force-new-deployment
