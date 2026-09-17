@@ -1,5 +1,5 @@
-from collections.abc import Iterable
 import re
+from collections.abc import Iterable
 
 from forgeai.models import Finding, RiskFactor, Severity
 from forgeai.services.github_client import PullRequestSnapshot
