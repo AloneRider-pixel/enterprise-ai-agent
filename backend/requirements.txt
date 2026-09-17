@@ -46,5 +46,5 @@ datasets==2.16.1
 
 # ─── Testing ───
 pytest==7.4.4
-pytest-asyncio==0.23.3
+pytest-asyncio==1.4.0
 pytest-cov==4.1.0
