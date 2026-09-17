@@ -6,7 +6,7 @@ from forgeai.services.github_client import PullRequestSnapshot
 
 
 SECURITY_PATHS = re.compile(
-    r"(^|/)(auth|security|permissions?|iam|oauth|sso|jwt|secrets?)(/|\.|$)",
+    r"(^|/)(auth|security|permissions?|iam|oauth|sso|jwt|secrets?|payments?)(/|\.|$)",
     re.IGNORECASE,
 )
 INFRA_PATHS = re.compile(
@@ -41,7 +41,7 @@ def analyze(snapshot: PullRequestSnapshot) -> tuple[list[Finding], list[RiskFact
                 severity=Severity.HIGH,
                 category="security",
                 title="Security-sensitive files changed",
-                detail="Authentication, authorization, identity, or secret-handling code changed.",
+                detail="Authentication, authorization, identity, payments, or secret-handling code changed.",
                 paths=security_paths,
             )
         )
