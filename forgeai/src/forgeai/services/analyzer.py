@@ -1,5 +1,4 @@
 import re
-from collections.abc import Iterable
 
 from forgeai.models import Finding, RiskFactor, Severity
 from forgeai.services.github_client import PullRequestSnapshot
@@ -25,7 +24,7 @@ DEPENDENCY_PATHS = re.compile(
 TEST_PATHS = re.compile(r"(^|/)(tests?|__tests__|spec)(/|\.|$)", re.IGNORECASE)
 
 
-def _paths_matching(paths: Iterable[str], pattern: re.Pattern[str]) -> list[str]:
+def _paths_matching(paths: list[str], pattern: re.Pattern[str]) -> list[str]:
     return [path for path in paths if pattern.search(path)]
 
 
