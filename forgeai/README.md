@@ -19,7 +19,6 @@ Change Analyzer
      |
      +--> file risk classification
      +--> test-impact analysis
-     +--> secret-pattern detection
      +--> dependency-change detection
      |
      v
@@ -36,9 +35,9 @@ Typed Review Report
 ## Current capabilities
 
 - Fetch public pull-request metadata and changed files from GitHub.
-- Detect high-risk areas such as authentication, payments, infrastructure, migrations, and workflow changes.
+- Detect high-risk areas such as authentication, authorization, payments, infrastructure, migrations, and workflow changes.
 - Detect missing or weak test coverage heuristically from changed paths.
-- Detect dependency-file changes and secret-like literals.
+- Detect dependency-file changes and surface compatibility review guidance.
 - Produce a deterministic 0–100 risk score with explainable factors.
 - Apply a configurable merge-gate policy.
 - Expose the review through a FastAPI endpoint.
