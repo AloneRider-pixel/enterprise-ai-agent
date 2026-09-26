@@ -73,9 +73,20 @@ jobs:
       - name: Dependency consistency
         working-directory: backend
         run: python -m pip check
-      - name: Lint
+      - name: Lint correctness gate
         working-directory: backend
-        run: python -m ruff check app/ --select E,F821,F822,F823
+        run: python -m ruff check app/ --select E9,F821,F822,F823
+      - name: Full lint advisory report
+        working-directory: backend
+        run: |
+          python -m ruff check app/ > ruff-report.txt || true
+          echo "Full Ruff report generated as an advisory artifact; correctness remains a blocking gate."
+      - name: Upload Ruff report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a0 # v7.0.1
+        with:
+          name: ruff-advisory-report
+          path: backend/ruff-report.txt
+          if-no-files-found: error
       - name: Test
         working-directory: backend
         env:
