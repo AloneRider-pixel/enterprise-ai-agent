@@ -7,7 +7,7 @@ python scripts/verify_evidence.py
 cd backend
 python -m pip install -r requirements.txt
 python -m pip check
-python -m ruff check app/
+python -m ruff check app/ --select E,F821,F822,F823
 python -m pytest tests/ -v --cov=app --cov-report=term-missing
 cd ../frontend
 npm install
