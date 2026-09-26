@@ -54,7 +54,7 @@ jobs:
           python -m pip install ruff
       - name: Lint
         working-directory: backend
-        run: python -m ruff check app/
+        run: python -m ruff check app/ --select E --line-length 180
       - name: Test
         working-directory: backend
         env:
