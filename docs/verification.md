@@ -29,3 +29,4 @@ A numeric result is publishable only when the repository records the dataset/sce
 The default RAG evaluation dataset is a curated local benchmark. It is useful for regression testing, but it is not evidence of production accuracy or general model performance.
 
 The CI quality gate uses Python bytecode compilation plus the backend test suite; CodeQL provides static security analysis. This keeps the merge gate deterministic while avoiding a legacy lint configuration that reports pre-existing formatting/import-style debt across the application.
+The authentication model layer is versioned in `backend/app/models/` and is loaded by the API router before database metadata initialization, so registration/login tests exercise the real persistence contract rather than a mocked model.
