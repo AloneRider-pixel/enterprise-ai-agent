@@ -170,6 +170,14 @@ These values are **design targets**, not measured production guarantees:
 - Human-in-the-loop review console.
 - Production deployment examples with least-privilege AWS IAM.
 
+## Evidence and reproducibility
+
+Quantitative claims in this repository are classified as capabilities, design targets, or measured results. Measured results must identify the dataset/workload, environment, run count, tooling, command, and commit that produced them. Synthetic demo data is explicitly labeled and is not used as proof of production performance.
+
+CI proves the configured tests, builds, and static checks passed for the commit under test. It does not by itself establish production latency, reliability, model quality, or scale.
+
+See [Evidence Policy](docs/evidence-policy.md).
+
 ## License
 
 MIT
