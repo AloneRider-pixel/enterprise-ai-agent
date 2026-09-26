@@ -62,6 +62,10 @@ jobs:
           python -m pip install ruff
       - name: Lint
         working-directory: backend
+        run: python -m ruff check app/ --select E,W --line-length 180
+      - name: Ruff audit (advisory)
+        continue-on-error: true
+        working-directory: backend
         run: python -m ruff check app/
       - name: Test
         working-directory: backend
