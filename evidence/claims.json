@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "policy": "docs/evidence-policy.md",
+  "claims": [
+    {
+      "id": "latency-p50-target",
+      "text": "P50 latency < 2s",
+      "class": "design_target",
+      "status": "not_measured",
+      "source": "README.md"
+    },
+    {
+      "id": "latency-p95-target",
+      "text": "P95 latency < 5s",
+      "class": "design_target",
+      "status": "not_measured",
+      "source": "README.md"
+    },
+    {
+      "id": "faithfulness-target",
+      "text": "Faithfulness > 0.85",
+      "class": "design_target",
+      "status": "not_measured",
+      "source": "README.md"
+    },
+    {
+      "id": "context-recall-target",
+      "text": "Context recall > 0.80",
+      "class": "design_target",
+      "status": "not_measured",
+      "source": "README.md"
+    },
+    {
+      "id": "hallucination-target",
+      "text": "Hallucination rate < 5%",
+      "class": "design_target",
+      "status": "not_measured",
+      "source": "README.md"
+    }
+  ]
+}
