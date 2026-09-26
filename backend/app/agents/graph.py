@@ -8,7 +8,7 @@ Flow:
 import logging
 from typing import Dict
 
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import END, StateGraph
 
 from app.agents.nodes import (
     generate_node,
@@ -73,8 +73,8 @@ def build_agent_graph() -> StateGraph:
     
     # ─── Edges ───
     
-    # START → input_guard
-    graph.add_edge(START, "input_guard")
+    # Entry point → input_guard
+    graph.set_entry_point("input_guard")
     
     # input_guard → conditional routing
     graph.add_conditional_edges(
