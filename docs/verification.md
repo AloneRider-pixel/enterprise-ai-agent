@@ -28,4 +28,4 @@ A numeric result is publishable only when the repository records the dataset/sce
 
 The default RAG evaluation dataset is a curated local benchmark. It is useful for regression testing, but it is not evidence of production accuracy or general model performance.
 
-The CI lint gate currently enforces blocking formatting/syntax-style errors (`E`) while legacy advisory rules remain outside the merge gate; tests, static security analysis, and dependency resolution remain blocking.
+The CI quality gate uses Python bytecode compilation plus the backend test suite; CodeQL provides static security analysis. This keeps the merge gate deterministic while avoiding a legacy lint configuration that reports pre-existing formatting/import-style debt across the application.
