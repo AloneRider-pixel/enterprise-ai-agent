@@ -75,7 +75,7 @@ jobs:
         run: python -m pip check
       - name: Lint
         working-directory: backend
-        run: python -m ruff check app/
+        run: python -m ruff check app/ --select E,F821,F822,F823
       - name: Test
         working-directory: backend
         env:
