@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: enterprise-ai-agent-ci-\${{ github.ref }}
+  group: enterprise-ai-agent-ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
