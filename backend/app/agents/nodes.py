@@ -31,6 +31,8 @@ async def input_guard_node(state: AgentState) -> Dict:
     Sets injection_detected flag if malicious input is found.
     """
     
+    query = state.get("query", "")
+
     # Prompt injection detection patterns
     injection_patterns = [
         r"ignore\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?)",
