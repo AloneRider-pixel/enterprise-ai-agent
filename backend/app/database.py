@@ -204,6 +204,7 @@ class VectorStore:
                     ts_rank(to_tsvector('english', content), plainto_tsquery('english', $3)) AS keyword_score
                 FROM document_chunks
                 WHERE to_tsvector('english', content) @@ plainto_tsquery('english', $3)
+                ORDER BY keyword_score DESC
                 LIMIT $2 * 2
             ),
             combined AS (
