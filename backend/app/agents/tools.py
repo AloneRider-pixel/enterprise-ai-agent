@@ -5,14 +5,34 @@ Implements Order Lookup, Refund Processing, Search, and Human Escalation.
 import json
 import logging
 import uuid
+from functools import wraps
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
 
 
+
+class AgentTool:
+    """Small local tool adapter; avoids coupling deterministic tools to an agent framework."""
+
+    def __init__(self, fn):
+        wraps(fn)(self)
+        self._fn = fn
+        self.name = fn.__name__
+        self.description = fn.__doc__ or ""
+
+    def __call__(self, *args, **kwargs):
+        return self._fn(*args, **kwargs)
+
+    def invoke(self, args: Optional[Dict[str, Any]] = None):
+        return self._fn(**(args or {}))
+
+
+def tool(fn):
+    """Decorator providing the .invoke() contract used by the runtime and tests."""
+    return AgentTool(fn)
 # ─── Mock Data (replace with real DB/API calls in production) ───
 
 MOCK_ORDERS = {

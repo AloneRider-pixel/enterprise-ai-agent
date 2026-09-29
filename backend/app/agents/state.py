@@ -2,20 +2,18 @@
 LangGraph agent state definition.
 Defines the state schema that flows through the agent graph.
 """
-from typing import Annotated, Any, Dict, List, Optional, TypedDict
-
-from langgraph.graph.message import add_messages
+from typing import Any, Dict, List, Optional, TypedDict
 
 
 class AgentState(TypedDict):
     """
     State for the Enterprise AI Support Agent.
     
-    This state flows through the LangGraph state machine,
+    This state flows through the explicit support-agent state machine,
     with each node reading/writing specific fields.
     """
     # ─── Conversation ───
-    messages: Annotated[list, add_messages]  # Message history (LangGraph managed)
+    messages: list  # Message history
     session_id: str                          # Session identifier
     user_id: str                             # User identifier
     query: str                               # Current user query

@@ -1,4 +1,4 @@
-"""Tests for the LangGraph agent components."""
+"""Tests for the agent orchestration components."""
 import pytest
 import json
 from app.agents.tools import (

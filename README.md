@@ -137,6 +137,12 @@ docker-compose exec backend python -m scripts.seed_documents
 | POST | `/api/documents/ingest/{id}` | Trigger ingestion |
 | POST | `/api/evaluation/run` | Run evaluation suite |
 
+## Evidence and verification
+
+This repository intentionally separates implemented capabilities, design targets, deterministic fixtures, and measured results. Performance targets below are **not measured production benchmarks**.
+
+See [Evidence Policy](docs/evidence-policy.md) for the claim standard and [Verification Guide](docs/verification.md) for the executable checks used in CI.
+
 ## Evaluation
 
 The project includes evaluation hooks for faithfulness, answer relevance, context recall, context precision, latency, and cost. Results should be reported with the evaluation dataset and methodology used.

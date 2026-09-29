@@ -8,8 +8,6 @@ import re
 import time
 from typing import Any, Dict, List
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-
 from app.agents.state import AgentState
 from app.agents.tools import TOOL_MAP
 from app.config import settings
@@ -30,9 +28,8 @@ async def input_guard_node(state: AgentState) -> Dict:
     Check for prompt injection attempts.
     Sets injection_detected flag if malicious input is found.
     """
-    
     query = state.get("query", "")
-
+    
     # Prompt injection detection patterns
     injection_patterns = [
         r"ignore\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?)",
