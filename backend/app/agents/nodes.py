@@ -30,7 +30,6 @@ async def input_guard_node(state: AgentState) -> Dict:
     Check for prompt injection attempts.
     Sets injection_detected flag if malicious input is found.
     """
-    query = state.get("query", "")
     
     # Prompt injection detection patterns
     injection_patterns = [
