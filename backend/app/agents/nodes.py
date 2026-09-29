@@ -271,8 +271,6 @@ async def tool_response_node(state: AgentState) -> Dict:
     Generate final response incorporating tool results.
     """
     tool_results = state.get("tool_results", [])
-    query = state.get("query", "")
-    
     if not tool_results:
         return {"response": "I couldn't process your request. Please try again."}
     
