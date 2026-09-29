@@ -141,7 +141,6 @@ class HallucinationDetector:
             return 0.8  # No matching context
 
         # NLI prediction: entailment, contradiction, neutral
-        labels = ["contradiction", "neutral", "entailment"]
         scores = self._nli_model.predict([(claim, best_sentence)])
         
         # Convert to hallucination score
