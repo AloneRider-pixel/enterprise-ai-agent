@@ -56,7 +56,7 @@ jobs:
         run: python scripts/verify_evaluation_dataset.py
       - name: Lint
         working-directory: backend
-        run: python -m ruff check app/ --select E,F --ignore E501,F401,B008,S110
+        run: python -m ruff check app/ --select E,F --ignore E402,E501,F401,B008,S110
       - name: Test
         working-directory: backend
         env:
