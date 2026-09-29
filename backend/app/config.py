@@ -3,12 +3,19 @@ Application configuration using pydantic-settings.
 All settings loaded from environment variables / .env file.
 """
 from pydantic_settings import BaseSettings
-from pydantic import Field
 from typing import Optional
+
+from pydantic import ConfigDict, Field, model_validator
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
+
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
     # ─── Application ───
     app_name: str = Field(default="enterprise-ai-agent", alias="APP_NAME")
@@ -30,6 +37,10 @@ class Settings(BaseSettings):
     postgres_db: str = Field(default="enterprise_agent", alias="POSTGRES_DB")
     postgres_user: str = Field(default="agent_user", alias="POSTGRES_USER")
     postgres_password: str = Field(default="agent_password", alias="POSTGRES_PASSWORD")
+    cors_allowed_origins: str = Field(
+        default="http://localhost:3000,http://localhost:5173",
+        alias="CORS_ALLOWED_ORIGINS",
+    )
 
     @property
     def database_url(self) -> str:
@@ -77,10 +88,15 @@ class Settings(BaseSettings):
     gpt4o_mini_output_price: float = 0.0006  # $0.60 per 1M tokens
     embedding_price: float = 0.00002  # $0.02 per 1M tokens
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.app_env.lower() not in {"development", "test"}:
+            if self.secret_key == "dev-secret-change-me":
+                raise ValueError("SECRET_KEY must be explicitly configured outside development/test")
+            if self.jwt_secret_key == "jwt-dev-secret":
+                raise ValueError("JWT_SECRET_KEY must be explicitly configured outside development/test")
+        return self
+
 
 
 settings = Settings()

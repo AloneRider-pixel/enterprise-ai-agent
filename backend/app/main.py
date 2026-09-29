@@ -13,6 +13,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_database, vector_store
 from app.redis_client import redis_client
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.logging_middleware import StructuredLoggingMiddleware
+from app.middleware.injection_guard import InjectionGuardMiddleware
+from app.auth.router import router as auth_router
+from app.api.chat import router as chat_router
+from app.api.documents import router as documents_router
+from app.api.admin import router as admin_router
 
 # ─── Configure Structured Logging ───
 
@@ -94,14 +101,17 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "*"],
+    allow_origins=[
+        origin.strip()
+        for origin in settings.cors_allowed_origins.split(",")
+        if origin.strip()
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Rate Limiting
-from app.middleware.rate_limit import RateLimitMiddleware
 app.add_middleware(
     RateLimitMiddleware,
     max_requests=settings.rate_limit_requests,
@@ -109,20 +119,13 @@ app.add_middleware(
 )
 
 # Structured Logging
-from app.middleware.logging_middleware import StructuredLoggingMiddleware
 app.add_middleware(StructuredLoggingMiddleware)
 
 # Prompt Injection Guard
-from app.middleware.injection_guard import InjectionGuardMiddleware
 app.add_middleware(InjectionGuardMiddleware, block_injection=False)
 
 
 # ─── Register Routes ───
-
-from app.auth.router import router as auth_router
-from app.api.chat import router as chat_router
-from app.api.documents import router as documents_router
-from app.api.admin import router as admin_router
 
 app.include_router(auth_router)
 app.include_router(chat_router)
