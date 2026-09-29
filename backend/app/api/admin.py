@@ -94,7 +94,6 @@ async def get_metrics(
     
     # Redis metrics
     total_cost = await cost_tracker.get_total_cost()
-    total_tokens = await cost_tracker.get_total_tokens()
     
     # Active sessions (approximate)
     active_sessions = await redis_client.get_counter("active_sessions")
@@ -131,7 +130,6 @@ async def run_evaluation(
         metrics=[m.value for m in request.metrics],
     )
     
-    total_latency = (time.time() - start_time) * 1000
     
     # Store results
     eval_run = EvaluationRun(
