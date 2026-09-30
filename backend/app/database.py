@@ -52,6 +52,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 # ─── Database Initialization ───
 async def init_database():
     """Create tables and enable pgvector extension."""
+    # Import persistence models before create_all so their tables are registered
+    # in Base.metadata. This keeps CI and fresh environments self-initializing.
+    from app.models import database as _database_models  # noqa: F401
+
     # Get a raw connection to run DDL
     conn = await asyncpg.connect(settings.database_url)
     try:
