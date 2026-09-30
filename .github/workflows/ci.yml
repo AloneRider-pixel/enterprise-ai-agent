@@ -64,6 +64,7 @@ jobs:
           POSTGRES_USER: test_user
           POSTGRES_PASSWORD: test_password
           POSTGRES_DB: test_db
+          OPENAI_API_KEY: test-key
           PYTHONPATH: .
         run: python -c "import asyncio; from app.database import init_database; asyncio.run(init_database())"
       - name: Test
