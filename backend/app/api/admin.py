@@ -2,7 +2,6 @@
 Admin API routes for metrics, evaluation, and system management.
 """
 import logging
-import time
 import uuid
 from datetime import datetime
 
@@ -121,8 +120,6 @@ async def run_evaluation(
     Measures faithfulness, relevance, recall, and latency.
     """
     from app.evaluation.evaluator import evaluate_rag
-    
-    start_time = time.time()
     
     # Run evaluation
     results = await evaluate_rag(
