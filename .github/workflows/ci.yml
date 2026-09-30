@@ -57,6 +57,15 @@ jobs:
       - name: Lint
         working-directory: backend
         run: python -m ruff check app/ --select E,F --ignore E402,E501,F401,B008,S110
+      - name: Initialize test database
+        working-directory: backend
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+          PYTHONPATH: .
+        run: python -c "import asyncio; from app.database import init_database; asyncio.run(init_database())"
       - name: Test
         working-directory: backend
         env:
