@@ -159,7 +159,7 @@ Please answer the customer's question using ONLY the context above. Include sour
         Yields SSE-formatted strings for each token chunk.
         """
         if not chunks:
-            yield f"data: {json.dumps({'event': 'token', 'content': 'I couldn\'t find relevant information. Would you like me to connect you with a human agent?'})}\n\n"
+            yield "data: " + json.dumps({"event": "token", "content": "I couldn't find relevant information. Would you like me to connect you with a human agent?"}) + "\n\n"
             yield f"data: {json.dumps({'event': 'done', 'citations': []})}\n\n"
             return
 
