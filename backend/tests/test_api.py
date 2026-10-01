@@ -43,8 +43,10 @@ async def test_register(client):
             "full_name": "Test User",
         },
     )
-    # May fail if DB not available in test env, but should not 500
-    assert response.status_code in (201, 409, 500)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == "test@example.com"
+    assert data["role"] == "user"
 
 
 @pytest.mark.asyncio
@@ -71,7 +73,7 @@ async def test_chat_requires_auth(client):
             "stream": False,
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio
