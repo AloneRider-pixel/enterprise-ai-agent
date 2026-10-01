@@ -14,9 +14,12 @@ graph TB
     UI[React Streaming Chat UI]
     API[FastAPI REST + SSE]
     AGENT[LangGraph Agent]
-    RAG[RAG Retrieval\nHybrid + Reranking]
-    TOOLS[Support Tools\nOrders / Refunds / Search / Escalation]
-    REDIS[(Redis\nCache + Memory)]
+    RAG[RAG Retrieval
+Hybrid + Reranking]
+    TOOLS[Support Tools
+Orders / Refunds / Search / Escalation]
+    REDIS[(Redis
+Cache + Memory)]
     PG[(PostgreSQL + pgvector)]
     AWS[AWS ECS / EC2]
 
@@ -173,3 +176,11 @@ These values are **design targets**, not measured production guarantees:
 ## License
 
 MIT
+
+## Repository review path
+
+Start with [architecture](docs/architecture.md), then [engineering notes](docs/ENGINEERING_NOTES.md) and [SECURITY.md](SECURITY.md). For local verification run `python -m ruff check app/` and `python -m pytest tests/ -v` from `backend/`. CI also validates the evaluation corpus, frontend build, container builds, CodeQL, dependency review, and Scorecard.
+
+## Maintenance standard
+
+Keep dependency pins internally compatible, keep GitHub Actions references immutable where practical, and preserve the distinction between synthetic evaluation fixtures and measured production evidence.
