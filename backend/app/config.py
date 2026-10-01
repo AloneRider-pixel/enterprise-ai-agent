@@ -2,9 +2,8 @@
 Application configuration using pydantic-settings.
 All settings loaded from environment variables / .env file.
 """
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -43,7 +42,7 @@ class Settings(BaseSettings):
     # ─── Redis ───
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
-    redis_password: Optional[str] = Field(default=None, alias="REDIS_PASSWORD")
+    redis_password: str | None = Field(default=None, alias="REDIS_PASSWORD")
 
     @property
     def redis_url(self) -> str:
@@ -78,10 +77,11 @@ class Settings(BaseSettings):
     gpt4o_mini_output_price: float = 0.0006  # $0.60 per 1M tokens
     embedding_price: float = 0.00002  # $0.02 per 1M tokens
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
 
 settings = Settings()
