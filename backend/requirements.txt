@@ -32,7 +32,7 @@ torch==2.1.2
 
 # ─── Authentication ───
 email-validator==2.3.0
-pyjwt==2.8.0
+pyjwt==2.15.1
 bcrypt==4.1.2
 python-multipart==0.0.32
 
