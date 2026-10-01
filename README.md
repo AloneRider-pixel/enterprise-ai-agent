@@ -1,67 +1,67 @@
-# 🤖 Enterprise AI Support & Knowledge Agent
+# Enterprise AI Support Agent
 
 [![CI](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Production-oriented enterprise support agent combining RAG, LangGraph workflows, tool calling, conversation memory, streaming APIs, and explicit safety controls.
+Production-oriented reference implementation for an enterprise AI support agent. It combines retrieval-augmented generation (RAG), LangGraph orchestration, authenticated APIs, tool calling, document ingestion, conversation memory, streaming responses, evaluation, and explicit safety boundaries.
 
 ## What it demonstrates
 
-- **Grounded RAG:** PDF/TXT/DOCX ingestion, embeddings, hybrid retrieval, reranking, and source citations.
-- **Agent workflows:** LangGraph orchestration with support tools, escalation paths, and multi-turn memory.
-- **Security boundaries:** JWT/RBAC, rate limiting, prompt-injection defenses, bounded uploads, and user-owned document/session access.
-- **Evaluation:** faithfulness, relevance, recall, precision, latency, and cost instrumentation.
-- **Delivery:** Dockerized services plus GitHub Actions CI, CodeQL, dependency review, and Scorecard.
+- **Grounded RAG:** PDF/TXT/DOCX/Markdown ingestion, chunking, embeddings, hybrid retrieval, reranking, and citations.
+- **Agent orchestration:** LangGraph state and bounded tool execution for support workflows.
+- **Security boundaries:** JWT authentication, role checks, rate limiting, prompt-injection defenses, bounded uploads, and owner-scoped resources.
+- **Evaluation:** faithfulness, answer relevance, context recall, precision, latency, and cost instrumentation.
+- **Delivery:** Dockerized PostgreSQL/pgvector, Redis, FastAPI, React/Vite, and GitHub Actions with CodeQL, dependency review, and Scorecard.
 
 ## Architecture
 
 ```mermaid
 graph TB
-    UI[React Chat UI] --> API[FastAPI + SSE]
+    UI[React + Vite] --> API[FastAPI]
+    API --> AUTH[JWT / RBAC]
     API --> AGENT[LangGraph Agent]
-    AGENT --> RAG[RAG Retrieval]
+    AGENT --> RAG[Hybrid RAG]
     AGENT --> TOOLS[Support Tools]
     RAG --> PG[(PostgreSQL + pgvector)]
-    AGENT --> REDIS[(Redis)]
-    API --> PG
-    API --> REDIS
+    API --> REDIS[(Redis)]
+    AGENT --> EVAL[Evaluation / telemetry]
 ```
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.11, FastAPI, SQLAlchemy |
-| AI | LangGraph, LangChain, OpenAI |
-| Retrieval | pgvector, BM25, cross-encoder reranking |
+| Backend | Python 3.11, FastAPI, SQLAlchemy, asyncpg |
+| AI | LangGraph, LangChain, OpenAI-compatible APIs |
+| Retrieval | pgvector, BM25/full-text search, reranking |
 | Data | PostgreSQL 16, Redis 7 |
-| Frontend | React 18, Vite, TailwindCSS |
+| Frontend | React 18, Vite, Tailwind CSS |
 | Auth | JWT / PyJWT |
-| Delivery | Docker, GitHub Actions, AWS |
+| Delivery | Docker Compose, GitHub Actions |
 
-## Repository layout
+## Repository map
 
 ```text
 backend/
-  app/
-    agents/        # Agent graphs, nodes, tools
-    api/           # HTTP endpoints
-    auth/          # Authentication / authorization
-    middleware/    # Injection, logging, rate limiting
-    rag/           # Retrieval and generation
-    services/      # Cost and hallucination services
+  app/agents/        # agent graph, nodes, tools
+  app/api/           # API routes
+  app/auth/          # authentication and authorization
+  app/middleware/    # rate limiting, logging, injection controls
+  app/rag/           # chunking, retrieval, reranking, generation
+  app/services/      # cost and hallucination services
   tests/
 frontend/
 evaluation/
 scripts/
+forgeai/
 docs/
 .github/workflows/
 ```
 
 ## Quick start
 
-Prerequisites: Docker Compose and an OpenAI API key.
+Prerequisites: Docker Compose.
 
 ```bash
 git clone https://github.com/AloneRider-pixel/enterprise-ai-agent.git
@@ -70,54 +70,51 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Default local endpoints:
+Local services:
 
 - Frontend: `http://localhost:3000`
 - API: `http://localhost:8000`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
+Do not place real credentials in `.env.example` or source control.
+
 ## Verification
 
-Run the same core checks used by CI:
+Core backend checks:
 
 ```bash
 cd backend
 python -m ruff check app/ --select E,F --ignore E402,E501,F401,B008,S110
-python -m pytest tests/ -v --tb=short --cov=app
+APP_ENV=test PYTHONPATH=. python -m pytest tests/ -v --tb=short --cov=app
 ```
 
-The repository CI additionally verifies the evaluation corpus, builds the frontend, and builds both container images.
+Repository CI also verifies the evaluation corpus, builds the frontend, and builds both container images.
 
-## Security
+## Security model
 
-Secrets are supplied through environment variables and should never be committed. Document and chat-session access is scoped to the authenticated owner, uploads are bounded, and side-effecting capabilities should remain behind explicit authorization gates.
+Treat user prompts, uploaded documents, retrieved text, model output, and tool arguments as untrusted inputs. Keep credentials server-side, enforce owner scoping, preserve authorization gates for side effects, and keep validation fail-closed.
 
-See [SECURITY.md](SECURITY.md) and [architecture](docs/architecture.md).
+See [SECURITY.md](SECURITY.md) and [docs/architecture.md](docs/architecture.md).
 
-## Evidence and evaluation
+## Evaluation integrity
 
-The repository contains deterministic evaluation fixtures. Treat fixture output and design targets as engineering evidence, not as a production benchmark. Any published metric should identify the dataset, methodology, environment, sample size, and producing commit.
+Checked-in evaluation fixtures provide reproducible engineering tests; they are not production benchmarks. Any published quality or performance figure should identify the dataset, methodology, environment, sample count, and producing commit.
 
-## Performance targets
+## Engineering standards
 
-These are design targets, not measured production guarantees.
+- Keep dependency constraints internally compatible.
+- Pin GitHub Actions to immutable commit SHAs.
+- Keep database initialization and migrations explicit.
+- Preserve deterministic tests and meaningful failure signals.
+- Never weaken validation to manufacture a passing build.
 
-| Metric | Target |
-|---|---:|
-| P50 latency | < 2s |
-| P95 latency | < 5s |
-| Faithfulness | > 0.85 |
-| Context recall | > 0.80 |
-| Hallucination rate | < 5% |
+## Documentation
 
-## Review path
-
-Start with [architecture](docs/architecture.md), [engineering notes](docs/ENGINEERING_NOTES.md), and [SECURITY.md](SECURITY.md). Review authentication, session ownership, document ownership, RAG trust boundaries, and tool authorization before changing behavior.
-
-## Maintenance standard
-
-Keep dependency constraints internally compatible, pin GitHub Actions to immutable SHAs, keep validation fail-closed, and preserve the distinction between synthetic evaluation evidence and measured production results.
+- [Architecture](docs/architecture.md)
+- [Engineering notes](docs/ENGINEERING_NOTES.md)
+- [Security](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## License
 
