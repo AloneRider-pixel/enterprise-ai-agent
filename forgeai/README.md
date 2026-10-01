@@ -1,39 +1,43 @@
-# ForgeAI — Embedded Engineering Review Core
+# ForgeAI — Embedded Review Core
 
-This directory contains the focused ForgeAI implementation embedded in the Enterprise AI Agent repository. It is intentionally kept independently testable from the parent application's optional model-assisted behavior.
+This directory contains the ForgeAI implementation embedded in the Enterprise AI Agent repository. It provides deterministic pull-request risk analysis without granting analysis code implicit execution authority.
 
 ## Purpose
 
-ForgeAI reviews GitHub pull-request changes using deterministic risk rules and typed analysis outputs. It treats repository content as untrusted data and keeps side-effecting automation behind policy boundaries.
-
-## Core flow
+ForgeAI converts GitHub pull-request changes into structured, explainable engineering review signals:
 
 ```text
 GitHub PR
-  ↓
+   ↓
 Change analysis
-  ├── security-sensitive paths
-  ├── dependency changes
-  ├── test impact
-  └── secret-like patterns
-  ↓
-Risk engine
-  ↓
-Typed review report
+   ├── security-sensitive paths
+   ├── dependency changes
+   ├── test impact
+   └── secret-like patterns
+   ↓
+Risk rules
+   ↓
+Typed review result
+   ↓
+Optional approval-gated automation
 ```
 
-## Local development
+## Design rules
+
+Repository content, diff text, logs, and model output are untrusted. The review layer remains bounded and deterministic where policy decisions are involved; side effects belong behind explicit authorization and approval controls.
+
+## Development
 
 From the repository root:
 
 ```bash
-cd forgeai
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env
 uvicorn forgeai.main:app --reload
 ```
+
+The parent repository owns the environment configuration; do not invent credentials inside this directory.
 
 ## Verification
 
@@ -43,14 +47,19 @@ pytest
 alembic upgrade head
 python scripts/run_eval.py
 python scripts/run_security_eval.py
+python scripts/verify_evidence.py --help
 ```
 
-These are aligned with the parent repository CI quality gates.
-
-## Security
-
-Do not execute repository content during analysis. Preserve webhook verification, input bounding, secret redaction, deterministic policy rules, and approval gates when extending GitHub/tool integrations.
+These checks align with the security and quality gates represented in the parent repository.
 
 ## Review path
 
-Review `src/forgeai/services/`, `src/forgeai/security.py`, `src/forgeai/tool_gateway.py`, and the deterministic/adversarial tests before changing risk or execution behavior.
+Start with `src/forgeai/security.py`, `src/forgeai/tool_gateway.py`, `src/forgeai/services/`, the migration set, and deterministic/adversarial tests before changing risk rules or GitHub/tool integrations.
+
+## Security
+
+Never execute arbitrary repository content during analysis. Preserve webhook verification, input bounding, secret redaction, policy determinism, and approval gates.
+
+## License
+
+MIT
