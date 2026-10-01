@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     app_name: str = Field(default="enterprise-ai-agent", alias="APP_NAME")
     app_env: str = Field(default="development", alias="APP_ENV")
     debug: bool = Field(default=True, alias="DEBUG")
-    secret_key: str = Field(default="dev-secret-change-me", alias="SECRET_KEY")
+    secret_key: str = Field(alias="SECRET_KEY")
     cors_allowed_origins: str = Field(default="http://localhost:3000,http://localhost:5173", alias="CORS_ALLOWED_ORIGINS")
 
     # ─── OpenAI ───
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
         return f"redis://{self.redis_host}:{self.redis_port}/0"
 
     # ─── Authentication ───
-    jwt_secret_key: str = Field(default="jwt-dev-secret", alias="JWT_SECRET_KEY")
+    jwt_secret_key: str = Field(alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
