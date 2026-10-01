@@ -3,7 +3,7 @@ Application configuration using pydantic-settings.
 All settings loaded from environment variables / .env file.
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, model_validator
 
 
 class Settings(BaseSettings):
@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # ─── Application ───
     app_name: str = Field(default="enterprise-ai-agent", alias="APP_NAME")
     app_env: str = Field(default="development", alias="APP_ENV")
-    debug: bool = Field(default=True, alias="DEBUG")
+    debug: bool = Field(default=False, alias="DEBUG")
     secret_key: str = Field(alias="SECRET_KEY")
     cors_allowed_origins: str = Field(default="http://localhost:3000,http://localhost:5173", alias="CORS_ALLOWED_ORIGINS")
 
@@ -76,6 +76,16 @@ class Settings(BaseSettings):
     gpt4o_mini_input_price: float = 0.00015  # $0.15 per 1M tokens
     gpt4o_mini_output_price: float = 0.0006  # $0.60 per 1M tokens
     embedding_price: float = 0.00002  # $0.02 per 1M tokens
+
+    @model_validator(mode="after")
+    def validate_runtime_security(self):
+        """Reject known insecure defaults in production-like environments."""
+        if self.app_env.lower() in {"production", "prod"}:
+            if self.debug:
+                raise ValueError("DEBUG must be false in production.")
+            if self.postgres_password == "agent_password":
+                raise ValueError("POSTGRES_PASSWORD must be explicitly configured in production.")
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",
