@@ -1,5 +1,4 @@
-"""
-PostgreSQL database setup with pgvector support.
+"""PostgreSQL database setup with pgvector support.
 Handles connection pooling, table creation, and vector operations.
 """
 import logging
@@ -8,20 +7,29 @@ from typing import AsyncGenerator, List, Optional
 
 import asyncpg
 from sqlalchemy import create_engine, text
-from sqlalchemy.pool import NullPool
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# ─── SQLAlchemy Async Engine ───
-engine_kwargs = {}\nif settings.app_env == "test":\n    engine_kwargs["poolclass"] = NullPool\n\nengine = create_async_engine(
-    settings.async_database_url,
-    echo=settings.debug,
-    pool_size=20,
-    max_overflow=10,\n    pool_pre_ping=True,\n    **engine_kwargs,\n)
+# SQLAlchemy's QueuePool binds connections to an event loop. Tests create
+# multiple async contexts, so use fresh connections in the test environment.
+engine_kwargs = {
+    "echo": settings.debug,
+}
+if settings.app_env == "test":
+    engine_kwargs["poolclass"] = NullPool
+else:
+    engine_kwargs.update(
+        pool_size=20,
+        max_overflow=10,
+        pool_pre_ping=True,
+    )
+
+engine = create_async_engine(settings.async_database_url, **engine_kwargs)
 
 async_session_factory = sessionmaker(
     engine,
@@ -29,12 +37,11 @@ async_session_factory = sessionmaker(
     expire_on_commit=False,
 )
 
-# ─── Base Model ───
+
 class Base(DeclarativeBase):
     pass
 
 
-# ─── Session Dependency ───
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Yield an async database session."""
     async with async_session_factory() as session:
@@ -48,31 +55,26 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
-# ─── Database Initialization ───
 async def init_database():
     """Create tables and enable pgvector extension."""
-    # Get a raw connection to run DDL
     conn = await asyncpg.connect(settings.database_url)
     try:
-        # Enable pgvector extension
         await conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         logger.info("pgvector extension enabled")
 
-        # Create tables via SQLAlchemy metadata
         async with engine.begin() as db_conn:
             await db_conn.run_sync(Base.metadata.create_all)
 
-        # Create vector index if not exists
         await conn.execute("""
             DO $$
             BEGIN
                 IF NOT EXISTS (
-                    SELECT 1 FROM pg_indexes 
+                    SELECT 1 FROM pg_indexes
                     WHERE tablename = 'document_chunks' AND indexname = 'chunk_embedding_idx'
                 ) THEN
-                    CREATE INDEX chunk_embedding_idx 
-                    ON document_chunks 
-                    USING ivfflat (embedding vector_cosine_ops) 
+                    CREATE INDEX chunk_embedding_idx
+                    ON document_chunks
+                    USING ivfflat (embedding vector_cosine_ops)
                     WITH (lists = 100);
                 END IF;
             END $$;
@@ -82,7 +84,6 @@ async def init_database():
         await conn.close()
 
 
-# ─── Raw pgvector Operations ───
 class VectorStore:
     """Direct pgvector operations for RAG pipeline."""
 
@@ -124,7 +125,7 @@ class VectorStore:
             chunk_id,
             document_id,
             content,
-            str(embedding),  # pgvector accepts string representation
+            str(embedding),
             metadata,
         )
 
@@ -137,7 +138,7 @@ class VectorStore:
         """Semantic similarity search using pgvector."""
         rows = await self.pool.fetch(
             """
-            SELECT 
+            SELECT
                 id,
                 document_id,
                 content,
@@ -154,15 +155,11 @@ class VectorStore:
         )
         return [dict(row) for row in rows]
 
-    async def keyword_search(
-        self,
-        query: str,
-        top_k: int = 10,
-    ) -> List[dict]:
+    async def keyword_search(self, query: str, top_k: int = 10) -> List[dict]:
         """Full-text search using PostgreSQL tsvector."""
         rows = await self.pool.fetch(
             """
-            SELECT 
+            SELECT
                 id,
                 document_id,
                 content,
@@ -190,7 +187,7 @@ class VectorStore:
         rows = await self.pool.fetch(
             """
             WITH vector_results AS (
-                SELECT 
+                SELECT
                     id, document_id, content, metadata,
                     1 - (embedding <=> $1::vector) AS vector_score
                 FROM document_chunks
@@ -198,7 +195,7 @@ class VectorStore:
                 LIMIT $2 * 2
             ),
             keyword_results AS (
-                SELECT 
+                SELECT
                     id, document_id, content, metadata,
                     ts_rank(to_tsvector('english', content), plainto_tsquery('english', $3)) AS keyword_score
                 FROM document_chunks
@@ -207,7 +204,7 @@ class VectorStore:
                 LIMIT $2 * 2
             ),
             combined AS (
-                SELECT 
+                SELECT
                     COALESCE(v.id, k.id) AS id,
                     COALESCE(v.document_id, k.document_id) AS document_id,
                     COALESCE(v.content, k.content) AS content,
@@ -250,5 +247,4 @@ class VectorStore:
         )
 
 
-# Singleton instance
 vector_store = VectorStore()
