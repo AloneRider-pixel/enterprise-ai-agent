@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     app_env: str = Field(default="development", alias="APP_ENV")
     debug: bool = Field(default=True, alias="DEBUG")
     secret_key: str = Field(default="dev-secret-change-me", alias="SECRET_KEY")
+    cors_allowed_origins: str = Field(default="http://localhost:3000,http://localhost:5173", alias="CORS_ALLOWED_ORIGINS")
 
     # ─── OpenAI ───
     openai_api_key: str = Field(alias="OPENAI_API_KEY")
