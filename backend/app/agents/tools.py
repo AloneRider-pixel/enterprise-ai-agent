@@ -45,7 +45,12 @@ MOCK_ORDERS = {
     },
 }
 
-def _utc_now():\n    """Return the current UTC time; isolated for deterministic tests."""\n    return datetime.now(timezone.utc)\n\n\nMOCK_REFUND_POLICY = {
+def _utc_now():
+    """Return the current UTC time; isolated for deterministic tests."""
+    return datetime.now(timezone.utc)
+
+
+MOCK_REFUND_POLICY = {
     "eligible_statuses": ["delivered", "shipped"],
     "refund_window_days": 30,
     "restock_fee_percent": 0,
