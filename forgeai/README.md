@@ -113,3 +113,11 @@ docker compose up --build
 ## License
 
 MIT
+
+## Parent project context
+
+This directory is a focused ForgeAI implementation embedded in the Enterprise AI Agent repository. Its deterministic analysis path should remain independently testable from optional model-assisted behavior.
+
+## Review path
+
+Run the parent repository CI and review the focused ForgeAI tests/documentation before changing risk rules, GitHub integration, or tool permissions.
