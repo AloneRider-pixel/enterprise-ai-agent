@@ -23,6 +23,7 @@ from app.rag.embeddings import embedding_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/documents", tags=["Documents"])
+MAX_FILE_SIZE = 50 * 1024 * 1024
 
 ALLOWED_TYPES = {
     "application/pdf": "pdf",
@@ -51,10 +52,10 @@ async def upload_document(
         )
     
     # Read file content
-    content = await file.read()
+    content = await file.read(MAX_FILE_SIZE + 1)
     file_size = len(content)
     
-    if file_size > 50 * 1024 * 1024:  # 50MB limit
+    if file_size > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="File too large. Maximum size is 50MB.",
@@ -64,8 +65,12 @@ async def upload_document(
     content_hash = hashlib.sha256(content).hexdigest()
     
     # Check for duplicate
+    user_id = uuid.UUID(current_user["user_id"])
     result = await db.execute(
-        select(Document).where(Document.content_hash == content_hash)
+        select(Document).where(
+            Document.content_hash == content_hash,
+            Document.uploaded_by == user_id,
+        )
     )
     existing = result.scalar_one_or_none()
     if existing:
@@ -94,7 +99,7 @@ async def upload_document(
         content_hash=content_hash,
         status="uploaded",
         raw_content=text_content,
-        uploaded_by=uuid.UUID(current_user["user_id"]) if len(current_user["user_id"]) == 36 else None,
+        uploaded_by=user_id,
     )
     
     db.add(document)
@@ -121,9 +126,18 @@ async def ingest_document(
     """
     Trigger document ingestion (chunking + embedding + vector storage).
     """
-    # Get document
+    # Get document owned by the authenticated user
+    try:
+        document_uuid = uuid.UUID(document_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid document ID")
+
+    user_id = uuid.UUID(current_user["user_id"])
     result = await db.execute(
-        select(Document).where(Document.id == uuid.UUID(document_id))
+        select(Document).where(
+            Document.id == document_uuid,
+            Document.uploaded_by == user_id,
+        )
     )
     document = result.scalar_one_or_none()
     
@@ -195,8 +209,11 @@ async def list_documents(
     db: AsyncSession = Depends(get_db),
 ):
     """List all uploaded documents with their status."""
+    user_id = uuid.UUID(current_user["user_id"])
     result = await db.execute(
-        select(Document).order_by(Document.created_at.desc())
+        select(Document)
+        .where(Document.uploaded_by == user_id)
+        .order_by(Document.created_at.desc())
     )
     documents = result.scalars().all()
     
@@ -222,18 +239,24 @@ async def delete_document(
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a document and its associated chunks."""
-    # Delete vector chunks
-    await vector_store.delete_document_chunks(document_id)
-    
-    # Delete document record
+    try:
+        document_uuid = uuid.UUID(document_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid document ID")
+
+    user_id = uuid.UUID(current_user["user_id"])
     result = await db.execute(
-        select(Document).where(Document.id == uuid.UUID(document_id))
+        select(Document).where(
+            Document.id == document_uuid,
+            Document.uploaded_by == user_id,
+        )
     )
     document = result.scalar_one_or_none()
     
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
+    await vector_store.delete_document_chunks(document_id)
     await db.delete(document)
     await db.commit()
     
