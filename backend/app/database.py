@@ -8,6 +8,7 @@ from typing import AsyncGenerator, List, Optional
 
 import asyncpg
 from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -16,13 +17,11 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 # ─── SQLAlchemy Async Engine ───
-engine = create_async_engine(
+engine_kwargs = {}\nif settings.app_env == "test":\n    engine_kwargs["poolclass"] = NullPool\n\nengine = create_async_engine(
     settings.async_database_url,
     echo=settings.debug,
     pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True,
-)
+    max_overflow=10,\n    pool_pre_ping=True,\n    **engine_kwargs,\n)
 
 async_session_factory = sessionmaker(
     engine,
