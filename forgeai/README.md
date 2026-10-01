@@ -1,91 +1,30 @@
-# ForgeAI — AI Software Engineering Platform
+# ForgeAI — Embedded Engineering Review Core
 
-ForgeAI is a production-oriented engineering agent that reviews GitHub pull requests, analyzes change risk, checks security-sensitive patterns, evaluates test impact, and produces a deterministic review report.
+This directory contains the focused ForgeAI implementation embedded in the Enterprise AI Agent repository. It is intentionally kept independently testable from the parent application's optional model-assisted behavior.
 
-The first release is intentionally an engineering system rather than a chatbot: it has a stable analysis core, typed domain models, policy gates, tests, container support, and CI.
+## Purpose
 
-## Architecture
+ForgeAI reviews GitHub pull-request changes using deterministic risk rules and typed analysis outputs. It treats repository content as untrusted data and keeps side-effecting automation behind policy boundaries.
+
+## Core flow
 
 ```text
-GitHub PR URL
-     |
-     v
-FastAPI API
-     |
-     +--> GitHub client ---------> GitHub REST API
-     |
-     v
-Change Analyzer
-     |
-     +--> file risk classification
-     +--> test-impact analysis
-     +--> secret-pattern detection
-     +--> dependency-change detection
-     |
-     v
-Risk Engine
-     |
-     +--> weighted risk score
-     +--> policy gate
-     +--> severity findings
-     |
-     v
-Typed Review Report
+GitHub PR
+  ↓
+Change analysis
+  ├── security-sensitive paths
+  ├── dependency changes
+  ├── test impact
+  └── secret-like patterns
+  ↓
+Risk engine
+  ↓
+Typed review report
 ```
 
-## Current capabilities
+## Local development
 
-- Fetch public pull-request metadata and changed files from GitHub.
-- Detect high-risk areas such as authentication, payments, infrastructure, migrations, and workflow changes.
-- Detect missing or weak test coverage heuristically from changed paths.
-- Detect dependency-file changes and secret-like literals.
-- Produce a deterministic 0–100 risk score with explainable factors.
-- Apply a configurable merge-gate policy.
-- Expose the review through a FastAPI endpoint.
-- Run locally without an LLM key.
-
-## API
-
-### `GET /health`
-
-Returns service status.
-
-### `POST /v1/reviews`
-
-```json
-{
-  "repository": "octocat/hello-world",
-  "pull_request": 42
-}
-```
-
-Returns a typed review containing risk score, gate decision, findings, and analysis factors.
-
-### `GET /docs`
-
-Interactive OpenAPI documentation.
-
-## Engineering decisions
-
-1. **Deterministic core first** — the baseline analyzer is explainable and testable without a model provider.
-2. **Provider-independent domain layer** — future LLM agents can sit behind a service boundary instead of controlling the entire application.
-3. **Risk as a policy primitive** — the score is accompanied by explicit factors and a gate decision.
-4. **GitHub as an adapter** — external API details stay out of the analysis engine.
-5. **Fail closed on malformed upstream data** — invalid upstream payloads are rejected rather than partially analyzed.
-
-## Roadmap
-
-- LangGraph-based planning agent with explicit tool permissions.
-- GitHub Actions tool for test execution and artifact collection.
-- CodeQL and dependency-review result ingestion.
-- Semantic code search and repository context via embeddings.
-- MCP-based tool gateway with allowlisted capabilities.
-- LLM review generation with structured outputs.
-- Offline benchmark suite over seeded repositories.
-- OpenTelemetry traces, Prometheus metrics, and cost/latency dashboards.
-- Human approval workflow before merge automation.
-
-## Run locally
+From the repository root:
 
 ```bash
 cd forgeai
@@ -96,28 +35,22 @@ cp .env.example .env
 uvicorn forgeai.main:app --reload
 ```
 
-Open `http://localhost:8000/docs`.
-
-## Tests
+## Verification
 
 ```bash
+ruff check src tests scripts migrations
 pytest
+alembic upgrade head
+python scripts/run_eval.py
+python scripts/run_security_eval.py
 ```
 
-## Docker
+These are aligned with the parent repository CI quality gates.
 
-```bash
-docker compose up --build
-```
+## Security
 
-## License
-
-MIT
-
-## Parent project context
-
-This directory is a focused ForgeAI implementation embedded in the Enterprise AI Agent repository. Its deterministic analysis path should remain independently testable from optional model-assisted behavior.
+Do not execute repository content during analysis. Preserve webhook verification, input bounding, secret redaction, deterministic policy rules, and approval gates when extending GitHub/tool integrations.
 
 ## Review path
 
-Run the parent repository CI and review the focused ForgeAI tests/documentation before changing risk rules, GitHub integration, or tool permissions.
+Review `src/forgeai/services/`, `src/forgeai/security.py`, `src/forgeai/tool_gateway.py`, and the deterministic/adversarial tests before changing risk or execution behavior.
