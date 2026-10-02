@@ -15,7 +15,8 @@ def test_production_rejects_debug():
         )
 
 
-def test_production_rejects_default_database_password():
+def test_production_rejects_default_database_password(monkeypatch):
+    monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
     with pytest.raises(ValueError, match="POSTGRES_PASSWORD"):
         Settings(
             APP_ENV="production",
