@@ -22,7 +22,7 @@ MOCK_ORDERS = {
         "status": "delivered",
         "items": [{"name": "Pro Plan Subscription", "quantity": 1, "price": 99.99}],
         "total": 99.99,
-        "created_at": "2024-01-15T10:30:00Z",
+        "created_at": "2026-09-01T10:30:00Z",
         "shipping": {"method": "digital", "tracking": None},
     },
     "ORD-002": {
