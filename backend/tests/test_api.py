@@ -80,4 +80,4 @@ async def test_chat_requires_auth(client):
 async def test_documents_requires_auth(client):
     """Test that document endpoints require authentication."""
     response = await client.get("/api/documents")
-    assert response.status_code == 403
+    assert response.status_code == 401
