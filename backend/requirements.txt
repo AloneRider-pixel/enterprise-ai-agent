@@ -14,7 +14,7 @@ openai==3.20.0
 
 # ─── Vector Database ───
 pgvector==0.2.4
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.13
 sqlalchemy[asyncio]==2.1.1
 asyncpg==0.31.0
 
