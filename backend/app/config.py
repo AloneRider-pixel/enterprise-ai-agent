@@ -2,9 +2,8 @@
 Application configuration using pydantic-settings.
 All settings loaded from environment variables / .env file.
 """
-from pydantic_settings import BaseSettings
-from pydantic import Field
-from typing import Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, model_validator
 
 
 class Settings(BaseSettings):
@@ -13,8 +12,9 @@ class Settings(BaseSettings):
     # ─── Application ───
     app_name: str = Field(default="enterprise-ai-agent", alias="APP_NAME")
     app_env: str = Field(default="development", alias="APP_ENV")
-    debug: bool = Field(default=True, alias="DEBUG")
-    secret_key: str = Field(default="dev-secret-change-me", alias="SECRET_KEY")
+    debug: bool = Field(default=False, alias="DEBUG")
+    secret_key: str = Field(alias="SECRET_KEY")
+    cors_allowed_origins: str = Field(default="http://localhost:3000,http://localhost:5173", alias="CORS_ALLOWED_ORIGINS")
 
     # ─── OpenAI ───
     openai_api_key: str = Field(alias="OPENAI_API_KEY")
@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # ─── Redis ───
     redis_host: str = Field(default="localhost", alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
-    redis_password: Optional[str] = Field(default=None, alias="REDIS_PASSWORD")
+    redis_password: str | None = Field(default=None, alias="REDIS_PASSWORD")
 
     @property
     def redis_url(self) -> str:
@@ -51,7 +51,7 @@ class Settings(BaseSettings):
         return f"redis://{self.redis_host}:{self.redis_port}/0"
 
     # ─── Authentication ───
-    jwt_secret_key: str = Field(default="jwt-dev-secret", alias="JWT_SECRET_KEY")
+    jwt_secret_key: str = Field(alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
@@ -77,10 +77,21 @@ class Settings(BaseSettings):
     gpt4o_mini_output_price: float = 0.0006  # $0.60 per 1M tokens
     embedding_price: float = 0.00002  # $0.02 per 1M tokens
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    @model_validator(mode="after")
+    def validate_runtime_security(self):
+        """Reject known insecure defaults in production-like environments."""
+        if self.app_env.lower() in {"production", "prod"}:
+            if self.debug:
+                raise ValueError("DEBUG must be false in production.")
+            if self.postgres_password == "agent_password":
+                raise ValueError("POSTGRES_PASSWORD must be explicitly configured in production.")
+        return self
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
 
 settings = Settings()

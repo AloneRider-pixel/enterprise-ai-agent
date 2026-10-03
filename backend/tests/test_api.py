@@ -43,11 +43,10 @@ async def test_register(client):
             "full_name": "Test User",
         },
     )
-    # CI initializes the database before running the suite.
     assert response.status_code == 201
     data = response.json()
     assert data["email"] == "test@example.com"
-    assert data["full_name"] == "Test User"
+    assert data["role"] == "user"
 
 
 @pytest.mark.asyncio

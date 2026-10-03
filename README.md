@@ -1,174 +1,120 @@
-# 🤖 Enterprise AI Support & Knowledge Agent
+# Enterprise AI Support Agent
 
 [![CI](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Enterprise support agent combining RAG, tool calling, conversation memory, streaming APIs, and safety controls.**
+Production-oriented reference implementation for an enterprise AI support agent. It combines retrieval-augmented generation (RAG), LangGraph orchestration, authenticated APIs, tool calling, document ingestion, conversation memory, streaming responses, evaluation, and explicit safety boundaries.
 
-> **Portfolio focus:** Python + FastAPI + LangGraph + RAG + pgvector + Redis + React + production-style AI controls.
+## What it demonstrates
+
+- **Grounded RAG:** PDF/TXT/DOCX/Markdown ingestion, chunking, embeddings, hybrid retrieval, reranking, and citations.
+- **Agent orchestration:** LangGraph state and bounded tool execution for support workflows.
+- **Security boundaries:** JWT authentication, role checks, rate limiting, prompt-injection defenses, bounded uploads, and owner-scoped resources.
+- **Evaluation:** faithfulness, answer relevance, context recall, precision, latency, and cost instrumentation.
+- **Delivery:** Dockerized PostgreSQL/pgvector, Redis, FastAPI, React/Vite, and GitHub Actions with CodeQL, dependency review, and Scorecard.
 
 ## Architecture
 
 ```mermaid
 graph TB
-    UI[React Streaming Chat UI]
-    API[FastAPI REST + SSE]
-    AGENT[LangGraph Agent]
-    RAG[RAG Retrieval\nHybrid + Reranking]
-    TOOLS[Support Tools\nOrders / Refunds / Search / Escalation]
-    REDIS[(Redis\nCache + Memory)]
-    PG[(PostgreSQL + pgvector)]
-    AWS[AWS ECS / EC2]
-
-    UI --> API --> AGENT
-    AGENT --> RAG
-    AGENT --> TOOLS
-    RAG --> PG
-    AGENT --> REDIS
-    API --> REDIS
-    API --> PG
-    API --> AWS
+    UI[React + Vite] --> API[FastAPI]
+    API --> AUTH[JWT / RBAC]
+    API --> AGENT[LangGraph Agent]
+    AGENT --> RAG[Hybrid RAG]
+    AGENT --> TOOLS[Support Tools]
+    RAG --> PG[(PostgreSQL + pgvector)]
+    API --> REDIS[(Redis)]
+    AGENT --> EVAL[Evaluation / telemetry]
 ```
 
-## Core capabilities
-
-### RAG pipeline
-- PDF, TXT, and DOCX ingestion.
-- Recursive chunking with overlap preservation.
-- OpenAI embeddings stored in pgvector.
-- Hybrid vector + BM25 retrieval.
-- Cross-encoder reranking.
-- Source citation tracking for generated responses.
-
-### Agent workflows
-- Tool/function calling for order lookup, refund, web search, and human escalation.
-- Redis-backed conversation memory.
-- Multi-turn workflows implemented with LangGraph.
-- SSE streaming for interactive responses.
-
-### Security and safety
-- JWT authentication and role-based access.
-- Redis-backed rate limiting.
-- Prompt-injection detection.
-- Hallucination/faithfulness checks.
-- Input validation and explicit CORS configuration.
-
-### Observability and evaluation
-- Structured JSON logging.
-- Request latency and token/cost tracking.
-- Evaluation of faithfulness, relevance, recall, and precision.
-- Automated CI for linting and testing.
-
-## Technology stack
+## Stack
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.11, FastAPI |
-| AI | LangGraph, LangChain, OpenAI |
-| Retrieval | pgvector, BM25, cross-encoder reranking |
-| Database | PostgreSQL 16 |
-| Cache / memory | Redis 7 |
-| Frontend | React 18, Vite, TailwindCSS |
-| Auth | JWT, PyJWT |
-| Infrastructure | Docker, AWS, GitHub Actions |
+| Backend | Python 3.11, FastAPI, SQLAlchemy, asyncpg |
+| AI | LangGraph, LangChain, OpenAI-compatible APIs |
+| Retrieval | pgvector, BM25/full-text search, reranking |
+| Data | PostgreSQL 16, Redis 7 |
+| Frontend | React 18, Vite, Tailwind CSS |
+| Auth | JWT / PyJWT |
+| Delivery | Docker Compose, GitHub Actions |
 
-## Repository structure
+## Repository map
 
 ```text
-enterprise-ai-agent/
-├── backend/
-│   ├── app/
-│   │   ├── agents/
-│   │   ├── rag/
-│   │   ├── api/
-│   │   ├── auth/
-│   │   ├── middleware/
-│   │   └── services/
-│   └── tests/
-├── frontend/
-│   └── src/
-├── evaluation/
-├── scripts/
-├── .github/workflows/ci.yml
-├── docker-compose.yml
-└── README.md
+backend/
+  app/agents/        # agent graph, nodes, tools
+  app/api/           # API routes
+  app/auth/          # authentication and authorization
+  app/middleware/    # rate limiting, logging, injection controls
+  app/rag/           # chunking, retrieval, reranking, generation
+  app/services/      # cost and hallucination services
+  tests/
+frontend/
+evaluation/
+scripts/
+forgeai/
+docs/
+.github/workflows/
 ```
 
-## Local development
+## Quick start
 
-### Prerequisites
-
-- Docker + Docker Compose
-- OpenAI API key
-
-### Start
+Prerequisites: Docker Compose.
 
 ```bash
 git clone https://github.com/AloneRider-pixel/enterprise-ai-agent.git
 cd enterprise-ai-agent
 cp .env.example .env
-docker-compose up --build
+docker compose up --build
 ```
 
-Services:
+Local services:
 
-- Backend: `http://localhost:8000`
 - Frontend: `http://localhost:3000`
+- API: `http://localhost:8000`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-### Initialize demo data
+Do not place real credentials in `.env.example` or source control.
+
+## Verification
+
+Core backend checks:
 
 ```bash
-docker-compose exec backend python -m app.scripts.create_admin
-docker-compose exec backend python -m scripts.seed_documents
+cd backend
+python -m ruff check app/ --select E,F --ignore E402,E501,F401,B008,S110
+APP_ENV=test PYTHONPATH=. python -m pytest tests/ -v --tb=short --cov=app
 ```
 
-## API surface
+Repository CI also verifies the evaluation corpus, builds the frontend, and builds both container images.
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/api/auth/register` | Register a user |
-| POST | `/api/auth/login` | Obtain JWT |
-| GET | `/api/auth/me` | Current user |
-| POST | `/api/chat` | Streaming chat |
-| GET | `/api/chat/history/{session_id}` | Conversation history |
-| POST | `/api/documents/upload` | Upload document |
-| POST | `/api/documents/ingest/{id}` | Trigger ingestion |
-| POST | `/api/evaluation/run` | Run evaluation suite |
+## Security model
 
-## Evaluation
+Treat user prompts, uploaded documents, retrieved text, model output, and tool arguments as untrusted inputs. Keep credentials server-side, enforce owner scoping, preserve authorization gates for side effects, and keep validation fail-closed.
 
-The project includes evaluation hooks for faithfulness, answer relevance, context recall, context precision, latency, and cost. Results should be reported with the evaluation dataset and methodology used.
+See [SECURITY.md](SECURITY.md) and [docs/architecture.md](docs/architecture.md).
 
-## Performance targets
+## Evaluation integrity
 
-These values are **design targets**, not measured production guarantees:
+Checked-in evaluation fixtures provide reproducible engineering tests; they are not production benchmarks. Any published quality or performance figure should identify the dataset, methodology, environment, sample count, and producing commit.
 
-| Metric | Target |
-|---|---:|
-| P50 latency | `< 2s` |
-| P95 latency | `< 5s` |
-| Faithfulness | `> 0.85` |
-| Context recall | `> 0.80` |
-| Hallucination rate | `< 5%` |
+## Engineering standards
 
-## Security
+- Keep dependency constraints internally compatible.
+- Pin GitHub Actions to immutable commit SHAs.
+- Keep database initialization and migrations explicit.
+- Preserve deterministic tests and meaningful failure signals.
+- Never weaken validation to manufacture a passing build.
 
-- Passwords hashed with bcrypt.
-- JWT tokens with configurable expiry.
-- Per-user rate limiting.
-- Prompt-injection detection.
-- Input validation and configurable CORS.
-- Runtime secrets supplied through environment variables.
+## Documentation
 
-## Roadmap
-
-- Stronger structured output validation for tool calls.
-- OpenTelemetry traces and metrics.
-- Persistent evaluation history.
-- Human-in-the-loop review console.
-- Production deployment examples with least-privilege AWS IAM.
+- [Architecture](docs/architecture.md)
+- [Engineering notes](docs/ENGINEERING_NOTES.md)
+- [Security](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## License
 

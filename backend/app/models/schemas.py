@@ -1,25 +1,26 @@
-"""Pydantic API schemas for the Enterprise AI Agent."""
+"""Pydantic request/response schemas for the Enterprise AI Agent API."""
 from datetime import datetime
 from enum import Enum
-from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserRegister(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
-    password: str = Field(min_length=8, max_length=256)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
     full_name: str = Field(min_length=1, max_length=255)
 
 
 class UserLogin(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
-    password: str = Field(min_length=1, max_length=256)
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
 
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
-    email: str
+    email: EmailStr
     full_name: str
     role: str
     created_at: datetime
@@ -33,21 +34,21 @@ class TokenResponse(BaseModel):
 
 class ChatMessage(BaseModel):
     session_id: str = Field(min_length=1, max_length=64)
-    message: str = Field(min_length=1, max_length=20_000)
+    message: str = Field(min_length=1, max_length=20000)
     stream: bool = False
 
 
 class ChatResponse(BaseModel):
     session_id: str
     message: str
-    citations: list[Any] = Field(default_factory=list)
-    tool_calls: list[Any] = Field(default_factory=list)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    citations: list[dict] = Field(default_factory=list)
+    tool_calls: list[dict] = Field(default_factory=list)
+    metadata: dict = Field(default_factory=dict)
 
 
 class ConversationHistory(BaseModel):
     session_id: str
-    messages: list[Any] = Field(default_factory=list)
+    messages: list[dict] = Field(default_factory=list)
 
 
 class DocumentStatus(BaseModel):
@@ -73,23 +74,29 @@ class DocumentUploadResponse(BaseModel):
 
 
 class EvaluationMetric(str, Enum):
-    faithfulness = "faithfulness"
-    answer_relevance = "answer_relevance"
-    context_recall = "context_recall"
-    context_precision = "context_precision"
+    FAITHFULNESS = "faithfulness"
+    ANSWER_RELEVANCE = "answer_relevance"
+    CONTEXT_RECALL = "context_recall"
+    CONTEXT_PRECISION = "context_precision"
 
 
 class EvalRequest(BaseModel):
-    dataset_name: str = Field(min_length=1, max_length=100)
-    metrics: list[EvaluationMetric] = Field(default_factory=lambda: list(EvaluationMetric))
+    dataset_name: str = Field(default="default", min_length=1, max_length=100)
+    metrics: list[EvaluationMetric] = Field(
+        default_factory=lambda: [
+            EvaluationMetric.FAITHFULNESS,
+            EvaluationMetric.ANSWER_RELEVANCE,
+            EvaluationMetric.CONTEXT_RECALL,
+        ]
+    )
 
 
 class EvalResult(BaseModel):
     dataset_name: str
-    metrics: dict[str, Any] = Field(default_factory=dict)
+    metrics: dict
     num_samples: int
-    latency_stats: dict[str, Any] = Field(default_factory=dict)
-    cost_usd: float = 0.0
+    latency_stats: dict
+    cost_usd: float
     timestamp: datetime
 
 

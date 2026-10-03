@@ -27,6 +27,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
 
+async def _ensure_owned_session(
+    db: AsyncSession,
+    session_id: str,
+    user_id: str,
+) -> ChatSession | None:
+    """Reject access to an existing session owned by another user."""
+    user_uuid = uuid.UUID(user_id)
+    result = await db.execute(select(ChatSession).where(ChatSession.id == session_id))
+    session = result.scalar_one_or_none()
+    if session and session.user_id != user_uuid:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
 
 @router.post("")
 async def chat(
@@ -43,6 +57,9 @@ async def chat(
     start_time = time.time()
     session_id = message.session_id
     
+    # Reject attempts to reuse another user's existing session.
+    await _ensure_owned_session(db, session_id, current_user["user_id"])
+
     # Check rate limit
     rate_limit = await redis_client.check_rate_limit(current_user["user_id"])
     if not rate_limit["allowed"]:
@@ -224,7 +241,10 @@ async def _log_query(
         
         # Update or create chat session
         result = await db.execute(
-            select(ChatSession).where(ChatSession.id == session_id)
+            select(ChatSession).where(
+                ChatSession.id == session_id,
+                ChatSession.user_id == uuid.UUID(user_id),
+            )
         )
         session = result.scalar_one_or_none()
         
@@ -252,8 +272,10 @@ async def _log_query(
 async def get_history(
     session_id: str,
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Get conversation history for a session."""
+    """Get conversation history for an owned session."""
+    await _ensure_owned_session(db, session_id, current_user["user_id"])
     messages = await redis_client.get_messages(session_id, limit=50)
     
     return ConversationHistory(
@@ -266,7 +288,9 @@ async def get_history(
 async def clear_history(
     session_id: str,
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Clear conversation history for a session."""
+    """Clear conversation history for an owned session."""
+    await _ensure_owned_session(db, session_id, current_user["user_id"])
     await redis_client.clear_session(session_id)
     return {"status": "cleared", "session_id": session_id}

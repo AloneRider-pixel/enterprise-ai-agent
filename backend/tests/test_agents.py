@@ -1,6 +1,9 @@
 """Tests for the LangGraph agent components."""
 import pytest
 import json
+from datetime import datetime, timezone
+from unittest.mock import patch
+
 from app.agents.tools import (
     lookup_order,
     process_refund,
@@ -28,10 +31,12 @@ class TestAgentTools:
         assert result["success"] is True
 
     def test_process_refund_eligible(self):
-        result = json.loads(process_refund.invoke({
-            "order_id": "ORD-001",
-            "reason": "Changed my mind",
-        }))
+        fixed_now = datetime.fromisoformat("2024-01-20T10:30:00+00:00")
+        with patch("app.agents.tools._utc_now", return_value=fixed_now):
+            result = json.loads(process_refund.invoke({
+                "order_id": "ORD-001",
+                "reason": "Changed my mind",
+            }))
         assert result["success"] is True
         assert result["eligible"] is True
         assert "refund_id" in result

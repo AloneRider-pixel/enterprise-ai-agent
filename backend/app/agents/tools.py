@@ -5,7 +5,7 @@ Implements Order Lookup, Refund Processing, Search, and Human Escalation.
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from langchain_core.tools import tool
@@ -44,6 +44,11 @@ MOCK_ORDERS = {
         "shipping": {"method": "digital", "tracking": None},
     },
 }
+
+def _utc_now():
+    """Return the current UTC time; isolated for deterministic tests."""
+    return datetime.now(timezone.utc)
+
 
 MOCK_REFUND_POLICY = {
     "eligible_statuses": ["delivered", "shipped"],
@@ -107,7 +112,7 @@ def process_refund(order_id: str, reason: str) -> str:
     
     # Check eligibility
     order_date = datetime.fromisoformat(order["created_at"].replace("Z", "+00:00"))
-    days_since_order = (datetime.now(order_date.tzinfo) - order_date).days
+    days_since_order = (_utc_now() - order_date.astimezone(timezone.utc)).days
     
     is_eligible = (
         order["status"] in MOCK_REFUND_POLICY["eligible_statuses"]
