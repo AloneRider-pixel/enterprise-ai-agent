@@ -22,9 +22,9 @@ Typed review result
 Optional approval-gated automation
 ```
 
-## Design rules
+## Boundary
 
-Repository content, diff text, logs, and model output are untrusted. The review layer remains bounded and deterministic where policy decisions are involved; side effects belong behind explicit authorization and approval controls.
+Repository content, diff text, logs, dependency metadata, and model output are untrusted. The review layer is bounded and deterministic where policy decisions are involved; side effects remain behind explicit authorization and approval controls owned by the surrounding application.
 
 ## Development
 
@@ -37,7 +37,7 @@ pip install -e ".[dev]"
 uvicorn forgeai.main:app --reload
 ```
 
-The parent repository owns the environment configuration; do not invent credentials inside this directory.
+The parent repository owns environment configuration. Do not introduce credentials or duplicate secret configuration inside this directory.
 
 ## Verification
 
@@ -50,15 +50,15 @@ python scripts/run_security_eval.py
 python scripts/verify_evidence.py --help
 ```
 
-These checks align with the security and quality gates represented in the parent repository.
+These checks align with the security and quality controls represented by the parent repository.
 
 ## Review path
 
-Start with `src/forgeai/security.py`, `src/forgeai/tool_gateway.py`, `src/forgeai/services/`, the migration set, and deterministic/adversarial tests before changing risk rules or GitHub/tool integrations.
+Start with `src/forgeai/security.py`, `src/forgeai/tool_gateway.py`, `src/forgeai/services/`, migration files, and deterministic/adversarial tests before changing risk rules or GitHub/tool integrations.
 
 ## Security
 
-Never execute arbitrary repository content during analysis. Preserve webhook verification, input bounding, secret redaction, policy determinism, and approval gates.
+Never execute arbitrary repository content during analysis. Preserve webhook verification, input bounding, secret redaction, deterministic policy checks, and approval gates.
 
 ## License
 
