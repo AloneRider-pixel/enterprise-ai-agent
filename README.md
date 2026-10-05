@@ -4,15 +4,15 @@
 [![CodeQL](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/codeql.yml/badge.svg)](https://github.com/AloneRider-pixel/enterprise-ai-agent/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Production-oriented reference implementation for an enterprise AI support agent. It combines retrieval-augmented generation (RAG), LangGraph orchestration, authenticated APIs, tool calling, document ingestion, conversation memory, streaming responses, evaluation, and explicit safety boundaries.
+Production-oriented reference implementation for an enterprise AI support agent. It combines retrieval-augmented generation, LangGraph orchestration, authenticated APIs, document ingestion, memory, streaming, evaluation, and explicit safety boundaries.
 
-## What it demonstrates
+## What the project demonstrates
 
 - **Grounded RAG:** PDF/TXT/DOCX/Markdown ingestion, chunking, embeddings, hybrid retrieval, reranking, and citations.
-- **Agent orchestration:** LangGraph state and bounded tool execution for support workflows.
+- **Agent orchestration:** LangGraph state management with bounded tool execution for support workflows.
 - **Security boundaries:** JWT authentication, role checks, rate limiting, prompt-injection defenses, bounded uploads, and owner-scoped resources.
 - **Evaluation:** faithfulness, answer relevance, context recall, precision, latency, and cost instrumentation.
-- **Delivery:** Dockerized PostgreSQL/pgvector, Redis, FastAPI, React/Vite, and GitHub Actions with CodeQL, dependency review, and Scorecard.
+- **Delivery:** Dockerized PostgreSQL/pgvector, Redis, FastAPI, React/Vite, CodeQL, dependency review, and Scorecard.
 
 ## Architecture
 
@@ -27,6 +27,8 @@ graph TB
     API --> REDIS[(Redis)]
     AGENT --> EVAL[Evaluation / telemetry]
 ```
+
+The browser is a presentation layer. Authorization, provider credentials, persistence, and side-effect controls remain server-side.
 
 ## Stack
 
@@ -44,12 +46,12 @@ graph TB
 
 ```text
 backend/
-  app/agents/        # agent graph, nodes, tools
-  app/api/           # API routes
-  app/auth/          # authentication and authorization
-  app/middleware/    # rate limiting, logging, injection controls
-  app/rag/           # chunking, retrieval, reranking, generation
-  app/services/      # cost and hallucination services
+  app/agents/
+  app/api/
+  app/auth/
+  app/middleware/
+  app/rag/
+  app/services/
   tests/
 frontend/
 evaluation/
@@ -77,7 +79,7 @@ Local services:
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-Do not place real credentials in `.env.example` or source control.
+Use only non-production credentials locally. Never commit secrets.
 
 ## Verification
 
@@ -89,25 +91,23 @@ python -m ruff check app/ --select E,F --ignore E402,E501,F401,B008,S110
 APP_ENV=test PYTHONPATH=. python -m pytest tests/ -v --tb=short --cov=app
 ```
 
-Repository CI also verifies the evaluation corpus, builds the frontend, and builds both container images.
+Repository CI also validates the evaluation corpus, frontend build, and container images.
 
 ## Security model
 
-Treat user prompts, uploaded documents, retrieved text, model output, and tool arguments as untrusted inputs. Keep credentials server-side, enforce owner scoping, preserve authorization gates for side effects, and keep validation fail-closed.
+Treat prompts, uploaded documents, retrieved text, model output, and tool arguments as untrusted inputs. Keep credentials server-side, enforce owner scoping, preserve authorization gates for side effects, and keep validation fail-closed.
 
 See [SECURITY.md](SECURITY.md) and [docs/architecture.md](docs/architecture.md).
 
 ## Evaluation integrity
 
-Checked-in evaluation fixtures provide reproducible engineering tests; they are not production benchmarks. Any published quality or performance figure should identify the dataset, methodology, environment, sample count, and producing commit.
+Checked-in evaluation fixtures provide reproducible engineering tests; they are not production benchmarks. Public quality or performance claims should include dataset, methodology, environment, sample count, and producing commit.
 
-## Engineering standards
+## Embedded ForgeAI
 
-- Keep dependency constraints internally compatible.
-- Pin GitHub Actions to immutable commit SHAs.
-- Keep database initialization and migrations explicit.
-- Preserve deterministic tests and meaningful failure signals.
-- Never weaken validation to manufacture a passing build.
+The [forgeai/](forgeai/) directory contains a bounded pull-request risk-analysis implementation used within this repository. Its policy decisions remain deterministic, with automation subject to explicit authorization.
+
+See [ForgeAI README](forgeai/README.md).
 
 ## Documentation
 
@@ -115,6 +115,10 @@ Checked-in evaluation fixtures provide reproducible engineering tests; they are 
 - [Engineering notes](docs/ENGINEERING_NOTES.md)
 - [Security](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)
+
+## Development standard
+
+Keep dependency constraints compatible, pin workflow actions to immutable commits, preserve deterministic tests, and never weaken validation to manufacture a passing build.
 
 ## License
 
