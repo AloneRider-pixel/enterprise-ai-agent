@@ -38,7 +38,7 @@ python-multipart==0.0.32
 
 # ─── Utilities ───
 httpx==0.28.1
-python-dotenv==1.0.0
+python-dotenv==1.2.4
 structlog==26.1.0
 sse-starlette==2.0.0
 tenacity==8.2.3
