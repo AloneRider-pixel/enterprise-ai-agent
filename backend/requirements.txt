@@ -19,7 +19,7 @@ sqlalchemy[asyncio]==2.1.1
 asyncpg==0.31.0
 
 # ─── Redis ───
-redis==5.0.1
+redis==8.1.0
 
 # ─── Document Processing ───
 pypdf==6.19.0
