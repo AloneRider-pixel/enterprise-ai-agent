@@ -27,7 +27,7 @@ python-docx==1.2.0
 tiktoken==0.14.0
 
 # ─── Reranking ───
-sentence-transformers==2.3.1
+sentence-transformers==6.1.0
 torch==2.14.1
 
 # ─── Authentication ───
