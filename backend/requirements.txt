@@ -41,7 +41,7 @@ httpx==0.28.1
 python-dotenv==1.2.4
 structlog==26.1.0
 sse-starlette==3.5.0
-tenacity==8.2.3
+tenacity==9.2.1
 
 # ─── Evaluation ───
 ragas==0.1.3
