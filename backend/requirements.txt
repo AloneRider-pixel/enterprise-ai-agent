@@ -44,7 +44,7 @@ sse-starlette==3.6.0
 tenacity==9.2.1
 
 # ─── Evaluation ───
-ragas==0.4.3
+ragas==0.3.0
 datasets==5.1.0
 
 # ──── Testing ───
