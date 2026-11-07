@@ -115,6 +115,13 @@ See [SECURITY.md](SECURITY.md) and [docs/architecture.md](docs/architecture.md).
 
 Checked-in evaluation fixtures provide reproducible engineering tests; they are not production benchmarks. Public quality or performance claims should include dataset, methodology, environment, sample count, and producing commit.
 
+## Limitations
+
+- Runs locally; there is no public deployment of this service.
+- The evaluation corpus is intentionally small (5 checked-in cases across 4 categories), and the metric helpers are heuristic proxies, not model-graded judgments.
+- Prompt-injection safeguards are heuristic pattern checks; their presence is a code feature, not measured protection.
+- Live answers require an OpenAI API key; the test suite runs without external calls.
+
 ## Embedded ForgeAI
 
 The [forgeai/](forgeai/) directory contains a bounded pull-request risk-analysis implementation used within this repository. Its policy decisions remain deterministic, with automation subject to explicit authorization.
