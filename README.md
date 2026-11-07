@@ -91,6 +91,8 @@ python -m ruff check app/ --select E,F --ignore E402,E501,F401,B008,S110
 APP_ENV=test PYTHONPATH=. python -m pytest tests/ -v --tb=short --cov=app
 ```
 
+The pytest suite needs a local PostgreSQL with the pgvector extension and the same dummy environment variables CI sets: `APP_ENV=test`, `OPENAI_API_KEY=test-key`, `SECRET_KEY`, `JWT_SECRET_KEY`, `DEFAULT_ADMIN_PASSWORD`, and `POSTGRES_HOST`/`POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` pointing at that database.
+
 Repository CI also validates the evaluation corpus, frontend build, and container images.
 
 ## Verified results
