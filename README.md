@@ -91,7 +91,21 @@ python -m ruff check app/ --select E,F --ignore E402,E501,F401,B008,S110
 APP_ENV=test PYTHONPATH=. python -m pytest tests/ -v --tb=short --cov=app
 ```
 
+The pytest suite needs a local PostgreSQL with the pgvector extension and the same dummy environment variables CI sets: `APP_ENV=test`, `OPENAI_API_KEY=test-key`, `SECRET_KEY`, `JWT_SECRET_KEY`, `DEFAULT_ADMIN_PASSWORD`, and `POSTGRES_HOST`/`POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` pointing at that database.
+
 Repository CI also validates the evaluation corpus, frontend build, and container images.
+
+## Verified results
+
+Measured at commit `f5492b4` (Python 3.12, local PostgreSQL 16 + pgvector provisioned; the suite does not need a live Redis).
+
+**Test suite**
+- 30 passed, 0 failed, including the API tests that require a real database (a fresh test database needs the CI init step `app.database init_database`; drop and recreate it before rerunning the full suite).
+- Frontend: `npm run build` (Vite, Node 22) passes.
+
+**Evaluation corpus integrity**
+- 5 checked-in cases across 4 categories, sha256-pinned (`8f76b1e...`); CI validates the corpus on every run.
+- Corpus fixtures are reproducible engineering tests, not production benchmarks (see [Evaluation integrity](#evaluation-integrity)).
 
 ## Security model
 
@@ -102,6 +116,13 @@ See [SECURITY.md](SECURITY.md) and [docs/architecture.md](docs/architecture.md).
 ## Evaluation integrity
 
 Checked-in evaluation fixtures provide reproducible engineering tests; they are not production benchmarks. Public quality or performance claims should include dataset, methodology, environment, sample count, and producing commit.
+
+## Limitations
+
+- Runs locally; there is no public deployment of this service.
+- The evaluation corpus is intentionally small (5 checked-in cases across 4 categories), and the metric helpers are heuristic proxies, not model-graded judgments.
+- Prompt-injection safeguards are heuristic pattern checks; their presence is a code feature, not measured protection.
+- Live answers require an OpenAI API key; the test suite runs without external calls.
 
 ## Embedded ForgeAI
 
