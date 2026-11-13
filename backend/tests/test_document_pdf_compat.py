@@ -1,0 +1,67 @@
+"""Small PDF extraction compatibility fixtures. No database or LLM calls."""
+import ast
+import base64
+from io import BytesIO
+import logging
+from pathlib import Path
+
+import pytest
+from pypdf import PdfReader, PdfWriter
+
+
+SINGLE = base64.b64decode('JVBERi0xLjMKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgaHR0cDovL3d3dy5yZXBvcnRsYWIuY29tCjEgMCBvYmoKPDwKL0YxIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9CYXNlRm9udCAvSGVsdmV0aWNhIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMSAvU3VidHlwZSAvVHlwZTEgL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL0NvbnRlbnRzIDcgMCBSIC9NZWRpYUJveCBbIDAgMCA1OTUuMjc1NiA4NDEuODg5OCBdIC9QYXJlbnQgNiAwIFIgL1Jlc291cmNlcyA8PAovRm9udCAxIDAgUiAvUHJvY1NldCBbIC9QREYgL1RleHQgL0ltYWdlQiAvSW1hZ2VDIC9JbWFnZUkgXQo+PiAvUm90YXRlIDAgL1RyYW5zIDw8Cgo+PiAKICAvVHlwZSAvUGFnZQo+PgplbmRvYmoKNCAwIG9iago8PAovUGFnZU1vZGUgL1VzZU5vbmUgL1BhZ2VzIDYgMCBSIC9UeXBlIC9DYXRhbG9nCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9BdXRob3IgKGFub255bW91cykgL0NyZWF0aW9uRGF0ZSAoRDoyMDI2MTExMzE3NDMwNiswMCcwMCcpIC9DcmVhdG9yIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSB3d3cucmVwb3J0bGFiLmNvbSkgL0tleXdvcmRzICgpIC9Nb2REYXRlIChEOjIwMjYxMTEzMTc0MzA2KzAwJzAwJykgL1Byb2R1Y2VyIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSB3d3cucmVwb3J0bGFiLmNvbSkgCiAgL1N1YmplY3QgKHVuc3BlY2lmaWVkKSAvVGl0bGUgKHVudGl0bGVkKSAvVHJhcHBlZCAvRmFsc2UKPj4KZW5kb2JqCjYgMCBvYmoKPDwKL0NvdW50IDEgL0tpZHMgWyAzIDAgUiBdIC9UeXBlIC9QYWdlcwo+PgplbmRvYmoKNyAwIG9iago8PAovRmlsdGVyIFsgL0FTQ0lJODVEZWNvZGUgL0ZsYXRlRGVjb2RlIF0gL0xlbmd0aCAxMTUKPj4Kc3RyZWFtCkdhcFFoMEU9RiwwVVxIM1RccE5ZVF5RS2s/dGM+SVAsO1cjVTFeMjNpaFBFTV8/Q1c0S0lTaF8malJHIlguXEY2Ulppcj0mRSlRRk9JVnFJT0JAWzZQYVJfPDtRNlcsUCwvX2Eiayc8YSJUVFdhKE1qfj5lbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA4CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDA3MyAwMDAwMCBuIAowMDAwMDAwMTA0IDAwMDAwIG4gCjAwMDAwMDAyMTEgMDAwMDAgbiAKMDAwMDAwMDQxNCAwMDAwMCBuIAowMDAwMDAwNDgyIDAwMDAwIG4gCjAwMDAwMDA3NzggMDAwMDAgbiAKMDAwMDAwMDgzNyAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9JRCAKWzxjZTNjMmIxNDJmYWI3MTQxYWUyODgyNDgzNGI0ZGYyYT48Y2UzYzJiMTQyZmFiNzE0MWFlMjg4MjQ4MzRiNGRmMmE+XQolIFJlcG9ydExhYiBnZW5lcmF0ZWQgUERGIGRvY3VtZW50IC0tIGRpZ2VzdCAoaHR0cDovL3d3dy5yZXBvcnRsYWIuY29tKQoKL0luZm8gNSAwIFIKL1Jvb3QgNCAwIFIKL1NpemUgOAo+PgpzdGFydHhyZWYKMTA0MgolJUVPRgo=')
+MULTI = base64.b64decode('JVBERi0xLjMKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgaHR0cDovL3d3dy5yZXBvcnRsYWIuY29tCjEgMCBvYmoKPDwKL0YxIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9CYXNlRm9udCAvSGVsdmV0aWNhIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMSAvU3VidHlwZSAvVHlwZTEgL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL0NvbnRlbnRzIDggMCBSIC9NZWRpYUJveCBbIDAgMCA1OTUuMjc1NiA4NDEuODg5OCBdIC9QYXJlbnQgNyAwIFIgL1Jlc291cmNlcyA8PAovRm9udCAxIDAgUiAvUHJvY1NldCBbIC9QREYgL1RleHQgL0ltYWdlQiAvSW1hZ2VDIC9JbWFnZUkgXQo+PiAvUm90YXRlIDAgL1RyYW5zIDw8Cgo+PiAKICAvVHlwZSAvUGFnZQo+PgplbmRvYmoKNCAwIG9iago8PAovQ29udGVudHMgOSAwIFIgL01lZGlhQm94IFsgMCAwIDU5NS4yNzU2IDg0MS44ODk4IF0gL1BhcmVudCA3IDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9QYWdlTW9kZSAvVXNlTm9uZSAvUGFnZXMgNyAwIFIgL1R5cGUgL0NhdGFsb2cKPj4KZW5kb2JqCjYgMCBvYmoKPDwKL0F1dGhvciAoYW5vbnltb3VzKSAvQ3JlYXRpb25EYXRlIChEOjIwMjYxMTEzMTc0MzA2KzAwJzAwJykgL0NyZWF0b3IgKFJlcG9ydExhYiBQREYgTGlicmFyeSAtIHd3dy5yZXBvcnRsYWIuY29tKSAvS2V5d29yZHMgKCkgL01vZERhdGUgKEQ6MjAyNjExMTMxNzQzMDYrMDAnMDAnKSAvUHJvZHVjZXIgKFJlcG9ydExhYiBQREYgTGlicmFyeSAtIHd3dy5yZXBvcnRsYWIuY29tKSAKICAvU3ViamVjdCAodW5zcGVjaWZpZWQpIC9UaXRsZSAodW50aXRsZWQpIC9UcmFwcGVkIC9GYWxzZQo+PgplbmRvYmoKNyAwIG9iago8PAovQ291bnQgMiAvS2lkcyBbIDMgMCBSIDQgMCBSIF0gL1R5cGUgL1BhZ2VzCj4+CmVuZG9iago4IDAgb2JqCjw8Ci9GaWx0ZXIgWyAvQVNDSUk4NURlY29kZSAvRmxhdGVEZWNvZGUgXSAvTGVuZ3RoIDEwOQo+PgpzdHJlYW0KR2FwUWgwRT1GLDBVXEgzVFxwTllUXlFLaz90Yz5JUCw7VyNVMV4yM2loUEVNXz9DVzRLSVNoXyZqUkciWC5cRjs9XUFZI09IcyRIO0hmPGI6bHEnOVdpNlBtViVCQClkXD1NXCEzVCo0Y2l+PmVuZHN0cmVhbQplbmRvYmoKOSAwIG9iago8PAovRmlsdGVyIFsgL0FTQ0lJODVEZWNvZGUgL0ZsYXRlRGVjb2RlIF0gL0xlbmd0aCAxMTAKPj4Kc3RyZWFtCkdhcFFoMEU9RiwwVVxIM1RccE5ZVF5RS2s/dGM+SVAsO1cjVTFeMjNpaFBFTV8/Q1c0S0lTaF8malJHIlguVSZwUltnIjpVNihbRDssVVNeV19lZUVTdVNiJFAsL19hImsnMF0iVFpNZygqaX4+ZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgMTAKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDczIDAwMDAwIG4gCjAwMDAwMDAxMDQgMDAwMDAgbiAKMDAwMDAwMDIxMSAwMDAwMCBuIAowMDAwMDAwNDE0IDAwMDAwIG4gCjAwMDAwMDA2MTcgMDAwMDAgbiAKMDAwMDAwMDY4NSAwMDAwMCBuIAowMDAwMDAwOTgxIDAwMDAwIG4gCjAwMDAwMDEwNDYgMDAwMDAgbiAKMDAwMDAwMTI0NSAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9JRCAKWzxkYTNiN2UyNDgxODNiNDM4ZDkwZWM0M2M3NjZhZTU1OD48ZGEzYjdlMjQ4MTgzYjQzOGQ5MGVjNDNjNzY2YWU1NTg+XQolIFJlcG9ydExhYiBnZW5lcmF0ZWQgUERGIGRvY3VtZW50IC0tIGRpZ2VzdCAoaHR0cDovL3d3dy5yZXBvcnRsYWIuY29tKQoKL0luZm8gNiAwIFIKL1Jvb3QgNSAwIFIKL1NpemUgMTAKPj4Kc3RhcnR4cmVmCjE0NDUKJSVFT0YK')
+
+
+@pytest.fixture(scope="module")
+def extract_text():
+    # Exercise the production pure helper without importing unrelated API/DB clients.
+    source = Path(__file__).parents[1] / "app" / "api" / "documents.py"
+    tree = ast.parse(source.read_text())
+    helper = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_extract_text")
+    namespace = {"BytesIO": BytesIO, "logger": logging.getLogger("pdf-test")}
+    module = ast.Module(body=[helper], type_ignores=[])
+    exec(compile(ast.fix_missing_locations(module), str(source), "exec"), namespace)
+    return namespace["_extract_text"]
+
+
+def test_pdf_single_page_extracts_text(extract_text):
+    assert "Hello PDF compatibility" in extract_text(SINGLE, "pdf")
+
+
+def test_pdf_multi_page_preserves_separator(extract_text):
+    text = extract_text(MULTI, "pdf")
+    assert "First fixture page" in text and "Second fixture page" in text
+    assert "\n\n" in text
+
+
+def test_pdf_blank_document_returns_empty(extract_text):
+    writer = PdfWriter()
+    writer.add_blank_page(width=612, height=792)
+    data = BytesIO()
+    writer.write(data)
+    assert extract_text(data.getvalue(), "pdf") == ""
+
+
+def test_pdf_rotated_page_extracts_text(extract_text):
+    writer = PdfWriter()
+    reader = PdfReader(BytesIO(SINGLE))
+    page = reader.pages[0]
+    page.rotate(90)
+    writer.add_page(page)
+    data = BytesIO()
+    writer.write(data)
+    assert "Hello PDF compatibility" in extract_text(data.getvalue(), "pdf")
+
+
+def test_pdf_malformed_input_retains_safe_empty_fallback(extract_text):
+    assert extract_text(b"not a PDF", "pdf") == ""
+
+
+def test_pdf_password_protection_retains_existing_empty_behavior(extract_text):
+    writer = PdfWriter()
+    writer.append_pages_from_reader(PdfReader(BytesIO(SINGLE)))
+    writer.encrypt("synthetic-fixture-only")
+    data = BytesIO()
+    writer.write(data)
+    assert extract_text(data.getvalue(), "pdf") == ""
