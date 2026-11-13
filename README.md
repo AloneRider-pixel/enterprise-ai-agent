@@ -104,7 +104,7 @@ Measured at commit `f5492b4` (Python 3.12, local PostgreSQL 16 + pgvector provis
 - Frontend: `npm run build` (Vite, Node 22) passes.
 
 **Evaluation corpus integrity**
-- 5 checked-in cases across 4 categories, sha256-pinned (`8f76b1e...`); CI validates the corpus on every run.
+- 5 checked-in cases across 4 categories. CI validates required fields, non-empty values and unique questions, and prints the corpus SHA-256 digest on every run. It does not enforce a fixed digest, so a structurally valid corpus edit requires a fresh review of any published results.
 - Corpus fixtures are reproducible engineering tests, not production benchmarks (see [Evaluation integrity](#evaluation-integrity)).
 
 ## Security model
