@@ -94,3 +94,64 @@ class TestMetrics:
         context = "Our office is located in San Francisco, California."
         score = compute_context_recall(ground_truth, context)
         assert score < 0.5
+
+
+@pytest.mark.asyncio
+async def test_updated_openai_runtime_with_offline_transport(monkeypatch):
+    import json
+    import httpx
+    from openai import AsyncOpenAI
+    from app.rag import generator, embeddings
+
+    requests = []
+
+    def respond(request):
+        requests.append(json.loads(request.content))
+        if request.url.path.endswith('/embeddings'):
+            return httpx.Response(200, json={
+                'object': 'list', 'data': [{'object': 'embedding', 'index': 0, 'embedding': [0.1, 0.2, 0.3]}],
+                'model': 'synthetic-model', 'usage': {'prompt_tokens': 3, 'total_tokens': 3}})
+        return httpx.Response(200, json={
+            'id': 'synthetic-completion', 'object': 'chat.completion', 'created': 1, 'model': 'synthetic-model',
+            'choices': [{'index': 0, 'message': {'role': 'assistant', 'content': 'Grounded fixture [Source 1]'}, 'finish_reason': 'stop'}],
+            'usage': {'prompt_tokens': 4, 'completion_tokens': 5, 'total_tokens': 9}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
+        async with AsyncOpenAI(api_key='synthetic-not-a-real-key', http_client=http, max_retries=0) as client:
+            monkeypatch.setattr(generator, 'openai_client', client)
+            monkeypatch.setattr(embeddings, 'openai_client', client)
+            result = await generator.RAGGenerator().generate('Synthetic question', [{'content': 'Synthetic context', 'document_id': 'fixture-doc', 'score': 0.9}])
+            assert result['response'] == 'Grounded fixture [Source 1]'
+            assert result['tokens']['total'] == 9
+            assert result['citations'][0]['document_id'] == 'fixture-doc'
+            service = embeddings.EmbeddingService()
+            first = await service.embed_text('Synthetic text')
+            assert first == [0.1, 0.2, 0.3]
+            assert await service.embed_text('Synthetic text') == first
+            assert len(requests) == 2
+            assert requests[0]['messages'][-1]['role'] == 'user'
+            assert requests[1]['dimensions'] == service.dimensions
+
+
+@pytest.mark.asyncio
+async def test_custom_evaluator_runs_builtin_corpus_without_ragas(monkeypatch):
+    from app.evaluation import evaluator
+    from app.evaluation.dataset import get_dataset
+
+    calls = []
+
+    class OfflineGraph:
+        async def ainvoke(self, state):
+            calls.append(state['query'])
+            return {'response': 'Synthetic grounded fixture', 'reranked_chunks': [{'content': 'Synthetic grounded fixture'}], 'token_usage': {}}
+
+    monkeypatch.setattr(evaluator, 'agent_graph', OfflineGraph())
+    result = await evaluator.evaluate_rag('default')
+    assert len(calls) == len(get_dataset('default')) == 10
+    assert result['num_samples'] == 10
+    assert len(result['results']) == 10
+    assert not any('error' in row for row in result['results'])
+    assert set(result['metrics']) == {'faithfulness', 'answer_relevance', 'context_recall'}
+    assert all(0 <= score <= 1 for score in result['metrics'].values())
+    assert result['cost_usd'] == 0
+    assert result['latency_stats']['count'] == 10

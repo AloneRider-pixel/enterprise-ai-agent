@@ -120,7 +120,7 @@ Checked-in evaluation fixtures provide reproducible engineering tests; they are 
 ## Limitations
 
 - Runs locally; there is no public deployment of this service.
-- The evaluation corpus is intentionally small (5 checked-in cases across 4 categories), and the metric helpers are heuristic proxies, not model-graded judgments.
+- The evaluation corpus is intentionally small (5 checked-in cases across 4 categories), and the metric helpers are heuristic proxies, not model-graded judgments. Evaluation runs the local metric helpers; Ragas is not a runtime dependency. The JSON integrity fixture above has 5 cases, while the runtime evaluator uses 10 built-in samples from `backend/app/evaluation/dataset.py`. These are separate corpora.
 - Prompt-injection safeguards are heuristic pattern checks; their presence is a code feature, not measured protection.
 - Live answers require an OpenAI API key; the test suite runs without external calls.
 

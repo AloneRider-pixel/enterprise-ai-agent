@@ -1,21 +1,21 @@
 # ─── Core Framework ───
-fastapi==0.162.0
+fastapi==0.162.2
 uvicorn[standard]==0.54.0
-pydantic==2.14.2
+pydantic==2.14.3
 pydantic-settings==2.16.2
 
 # ─── AI / LangChain ───
-langchain==1.4.8
-langchain-core==1.7.4
-langgraph==1.2.19
-langchain-openai==1.7.3
+langchain==1.4.9
+langchain-core==1.7.6
+langgraph==1.2.20
+langchain-openai==1.7.4
 langchain-community==0.4.2
-openai==3.42.1
+openai==3.48.0
 
 # ─── Vector Database ───
 pgvector==0.5.1
 psycopg2-binary==2.9.13
-sqlalchemy[asyncio]==2.1.6
+sqlalchemy[asyncio]==2.1.8
 asyncpg==0.32.0
 
 # ─── Redis ───
@@ -40,12 +40,12 @@ python-multipart==0.0.33
 httpx==0.28.1
 python-dotenv==1.2.4
 structlog==26.1.0
-sse-starlette==3.6.0
+sse-starlette==3.7.0
 tenacity==9.2.1
 
 # ─── Evaluation ───
-ragas==0.3.0
-datasets==5.1.0
+# Evaluation uses the local heuristic metric helpers, not Ragas.
+datasets==5.2.0
 
 # ──── Testing ───
 pytest==9.2.0
