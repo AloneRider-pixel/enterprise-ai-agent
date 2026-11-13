@@ -131,3 +131,27 @@ async def test_updated_openai_runtime_with_offline_transport(monkeypatch):
             assert len(requests) == 2
             assert requests[0]['messages'][-1]['role'] == 'user'
             assert requests[1]['dimensions'] == service.dimensions
+
+
+@pytest.mark.asyncio
+async def test_custom_evaluator_runs_builtin_corpus_without_ragas(monkeypatch):
+    from app.evaluation import evaluator
+    from app.evaluation.dataset import get_dataset
+
+    calls = []
+
+    class OfflineGraph:
+        async def ainvoke(self, state):
+            calls.append(state['query'])
+            return {'response': 'Synthetic grounded fixture', 'reranked_chunks': [{'content': 'Synthetic grounded fixture'}], 'token_usage': {}}
+
+    monkeypatch.setattr(evaluator, 'agent_graph', OfflineGraph())
+    result = await evaluator.evaluate_rag('default')
+    assert len(calls) == len(get_dataset('default')) == 10
+    assert result['num_samples'] == 10
+    assert len(result['results']) == 10
+    assert not any('error' in row for row in result['results'])
+    assert set(result['metrics']) == {'faithfulness', 'answer_relevance', 'context_recall'}
+    assert all(0 <= score <= 1 for score in result['metrics'].values())
+    assert result['cost_usd'] == 0
+    assert result['latency_stats']['count'] == 10
