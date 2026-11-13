@@ -22,7 +22,7 @@ asyncpg==0.32.0
 redis==8.1.0
 
 # ─── Document Processing ───
-pypdf==6.21.4
+pypdf==7.0.1
 python-docx==1.2.0
 tiktoken==0.14.0
 
@@ -44,7 +44,8 @@ sse-starlette==3.7.0
 tenacity==9.2.1
 
 # ─── Evaluation ───
-ragas==0.4.3
+# Ragas 0.4.3 requires instructor versions incompatible with OpenAI 3 / Tenacity 9.
+ragas==0.3.0
 datasets==5.2.0
 
 # ──── Testing ───
