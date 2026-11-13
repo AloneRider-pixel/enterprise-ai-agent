@@ -79,3 +79,18 @@ class TestAgentTools:
         }))
         assert result["success"] is True
         assert result["estimated_wait_minutes"] == 15
+
+
+@pytest.mark.asyncio
+async def test_updated_graph_routes_guarded_fixture_without_external_services(monkeypatch):
+    from app.agents import graph
+
+    async def guarded_fixture(state):
+        return {'injection_detected': True, 'iteration': 1}
+
+    monkeypatch.setattr(graph, 'input_guard_node', guarded_fixture)
+    result = await graph.build_agent_graph().ainvoke({'query': 'Synthetic blocked fixture', 'messages': []})
+    assert result['injection_detected'] is True
+    assert result['citations'] == []
+    assert result['needs_human'] is False
+    assert result['response']
