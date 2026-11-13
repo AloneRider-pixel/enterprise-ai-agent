@@ -44,8 +44,7 @@ sse-starlette==3.7.0
 tenacity==9.2.1
 
 # ─── Evaluation ───
-# Ragas 0.4.3 requires instructor versions incompatible with OpenAI 3 / Tenacity 9.
-ragas==0.3.0
+# Evaluation uses the local heuristic metric helpers, not Ragas.
 datasets==5.2.0
 
 # ──── Testing ───
