@@ -1,6 +1,7 @@
 """PostgreSQL database setup with pgvector support.
 Handles connection pooling, table creation, and vector operations.
 """
+import json
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, List, Optional
@@ -62,20 +63,33 @@ async def init_database():
         await conn.execute("CREATE EXTENSION IF NOT EXISTS vector;")
         logger.info("pgvector extension enabled")
 
+        # Import models so their tables register on Base.metadata before create_all.
+        import app.models.database  # noqa: F401
+
         async with engine.begin() as db_conn:
             await db_conn.run_sync(Base.metadata.create_all)
 
         await conn.execute("""
             DO $$
             BEGIN
+                -- Upgrade the old empty-table IVFFlat index as well as fresh installs.
+                IF EXISTS (
+                    SELECT 1 FROM pg_indexes
+                    WHERE schemaname = 'public' AND indexname = 'chunk_embedding_idx'
+                    AND indexdef ILIKE '%USING ivfflat%'
+                ) THEN
+                    DROP INDEX public.chunk_embedding_idx;
+                END IF;
                 IF NOT EXISTS (
                     SELECT 1 FROM pg_indexes
                     WHERE tablename = 'document_chunks' AND indexname = 'chunk_embedding_idx'
                 ) THEN
+                    -- HNSW, not IVFFlat: an IVFFlat index built on an empty table has
+                    -- untrained centroids and silently returns zero rows until REINDEX.
+                    -- HNSW works correctly when created before data is loaded (pgvector >= 0.5).
                     CREATE INDEX chunk_embedding_idx
                     ON document_chunks
-                    USING ivfflat (embedding vector_cosine_ops)
-                    WITH (lists = 100);
+                    USING hnsw (embedding vector_cosine_ops);
                 END IF;
             END $$;
         """)
@@ -92,10 +106,20 @@ class VectorStore:
 
     async def connect(self):
         """Initialize connection pool."""
+        async def _init_connection(conn):
+            # Transparently encode/decode JSONB so dicts round-trip
+            await conn.set_type_codec(
+                "jsonb",
+                encoder=json.dumps,
+                decoder=json.loads,
+                schema="pg_catalog",
+            )
+
         self.pool = await asyncpg.create_pool(
             settings.database_url,
             min_size=5,
             max_size=20,
+            init=_init_connection,
         )
 
     async def disconnect(self):
@@ -110,15 +134,17 @@ class VectorStore:
         content: str,
         embedding: List[float],
         metadata: dict,
+        chunk_index: int = 0,
     ):
         """Store a chunk embedding in pgvector."""
         await self.pool.execute(
             """
-            INSERT INTO document_chunks (id, document_id, content, embedding, metadata)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO document_chunks (id, document_id, content, embedding, chunk_index, metadata, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
             ON CONFLICT (id) DO UPDATE SET
                 content = EXCLUDED.content,
                 embedding = EXCLUDED.embedding,
+                chunk_index = EXCLUDED.chunk_index,
                 metadata = EXCLUDED.metadata,
                 updated_at = NOW()
             """,
@@ -126,6 +152,7 @@ class VectorStore:
             document_id,
             content,
             str(embedding),
+            chunk_index,
             metadata,
         )
 

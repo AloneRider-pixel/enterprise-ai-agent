@@ -66,6 +66,14 @@ class Settings(BaseSettings):
     rerank_top_n: int = Field(default=4)
     similarity_threshold: float = Field(default=0.7)
 
+    # ─── Multimodal PDF ingestion ───
+    page_image_dir: str = Field(default="data/page_images", alias="PAGE_IMAGE_DIR")
+    max_render_pages: int = Field(default=100, alias="MAX_RENDER_PAGES")
+    enable_pdf_ocr: bool = Field(default=True, alias="ENABLE_PDF_OCR")
+    enable_pdf_image_captions: bool = Field(
+        default=True, alias="ENABLE_PDF_IMAGE_CAPTIONS"
+    )
+
     # ─── Hallucination Detection ───
     hallucination_threshold: float = Field(default=0.7, alias="HALLUCINATION_THRESHOLD")
 

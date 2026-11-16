@@ -46,3 +46,6 @@ models/
 
 # Evaluation outputs
 evaluation/results_*.json
+
+# Rendered PDF page screenshots (citation evidence)
+data/

@@ -1,4 +1,5 @@
 """Tests for API endpoints."""
+import uuid
 import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
@@ -38,14 +39,14 @@ async def test_register(client):
     response = await client.post(
         "/api/auth/register",
         json={
-            "email": "test@example.com",
+            "email": f"test-{uuid.uuid4().hex}@example.com",
             "password": "securepass123",
             "full_name": "Test User",
         },
     )
     assert response.status_code == 201
     data = response.json()
-    assert data["email"] == "test@example.com"
+    assert data["email"].startswith("test-")
     assert data["role"] == "user"
 
 

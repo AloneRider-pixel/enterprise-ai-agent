@@ -28,7 +28,7 @@ function App() {
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-            <span className="text-white text-lg">🤖</span>
+            <span className="text-white text-lg">AI</span>
           </div>
           <div>
             <h1 className="text-lg font-semibold text-gray-900">Enterprise AI Agent</h1>
@@ -46,7 +46,7 @@ function App() {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            💬 Chat
+             Chat
           </button>
           <button
             onClick={() => setActiveTab('documents')}
@@ -56,7 +56,7 @@ function App() {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            📄 Documents
+             Documents
           </button>
         </nav>
 
