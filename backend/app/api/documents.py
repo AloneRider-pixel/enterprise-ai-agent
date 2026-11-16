@@ -321,9 +321,14 @@ async def get_page_image(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    # Resolve and check containment before touching the filesystem. UUID/int
+    # validation alone does not protect against symlinks in the image cache.
+    image_root = Path(settings.page_image_dir).resolve()
     image_path = (
-        Path(settings.page_image_dir) / str(document.id) / f"page-{page_number}.png"
-    )
+        image_root / str(document.id) / f"page-{page_number}.png"
+    ).resolve()
+    if not image_path.is_relative_to(image_root):
+        raise HTTPException(status_code=404, detail="Page image not found")
     if not image_path.is_file():
         raise HTTPException(status_code=404, detail="Page image not found")
 
