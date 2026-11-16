@@ -94,6 +94,8 @@ class RAGGenerator:
             parts.append(f"page {source['page_number']}")
         if source.get("kind") == "table":
             parts.append("table")
+        elif source.get("kind") == "image":
+            parts.append("image")
         parts.append(f"Score: {source.get('score', 0):.3f}")
         return ", ".join(parts)
 

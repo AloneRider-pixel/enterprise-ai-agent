@@ -1,15 +1,21 @@
 """Tests for the multimodal PDF parser: page-aware text, tables, screenshots.
 
 All fixtures are synthetic PDFs generated in-memory with reportlab.
-No database, network, or LLM calls.
+No database, network, or LLM calls. OCR tests skip without a tesseract
+binary; captioning is disabled by default and covered by an opt-in test
+(set RUN_CAPTION_TESTS=1) since it downloads a local model.
 """
+import os
+import shutil
 from io import BytesIO
 
 import pytest
+from PIL import Image, ImageDraw
 from pypdf import PdfReader, PdfWriter
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.pdfgen import canvas
 from reportlab.platypus import (
     Paragraph,
     SimpleDocTemplate,
@@ -19,12 +25,20 @@ from reportlab.platypus import (
     PageBreak,
 )
 
+from app.rag import pdf_parser
 from app.rag.pdf_parser import (
     PDFParseError,
     pages_to_segments,
     parse_pdf,
     render_page_images,
 )
+
+
+@pytest.fixture(autouse=True)
+def no_caption_model(monkeypatch):
+    """Keep unit tests offline: stub the captioner unless opted in."""
+    if not os.environ.get("RUN_CAPTION_TESTS"):
+        monkeypatch.setattr(pdf_parser, "_load_captioner", lambda: None)
 
 
 def _build_fixture_pdf() -> bytes:
@@ -59,6 +73,82 @@ def _build_fixture_pdf() -> bytes:
 
     doc.build(story)
     return buffer.getvalue()
+
+
+def _text_image(text: str, path: str) -> str:
+    """Render text into a PNG (a synthetic 'screenshot')."""
+    image = Image.new("RGB", (600, 200), "white")
+    draw = ImageDraw.Draw(image)
+    draw.text((20, 80), text, fill="black")
+    image.save(path)
+    return path
+
+
+def _build_screenshot_pdf(tmp_path) -> bytes:
+    """One page whose main content is an embedded screenshot with text."""
+    shot = _text_image("System status: all services operational", str(tmp_path / "shot.png"))
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    c.drawImage(shot, 60, 500, width=600, height=200)
+    c.showPage()
+    c.save()
+    return buffer.getvalue()
+
+
+def _build_scanned_pdf(tmp_path) -> bytes:
+    """A page that is only a scanned image (no embedded text layer)."""
+    scan = _text_image("Scanned invoice total due 42 dollars", str(tmp_path / "scan.png"))
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    c.drawImage(scan, 60, 400, width=600, height=200)
+    c.showPage()
+    c.save()
+    return buffer.getvalue()
+
+
+@pytest.mark.skipif(shutil.which("tesseract") is None, reason="tesseract binary not installed")
+class TestImageContentReading:
+    def test_embedded_screenshot_text_is_read(self, tmp_path):
+        pdf = _build_screenshot_pdf(tmp_path)
+        segments = pages_to_segments(parse_pdf(pdf))
+        image_segments = [s for s in segments if s["kind"] == "image"]
+        assert image_segments, "expected an image segment for the screenshot page"
+        assert image_segments[0]["page_number"] == 1
+        assert "operational" in image_segments[0]["content"]
+
+    def test_scanned_page_is_ocr_read(self, tmp_path):
+        pdf = _build_scanned_pdf(tmp_path)
+        segments = pages_to_segments(parse_pdf(pdf))
+        image_segments = [s for s in segments if s["kind"] == "image"]
+        assert image_segments, "expected an OCR segment for the scanned page"
+        assert "invoice" in image_segments[0]["content"]
+
+    def test_tiny_images_are_skipped(self, tmp_path):
+        tiny = Image.new("RGB", (16, 16), "white")
+        tiny_path = str(tmp_path / "tiny.png")
+        tiny.save(tiny_path)
+        buffer = BytesIO()
+        c = canvas.Canvas(buffer, pagesize=letter)
+        c.drawImage(tiny_path, 60, 500, width=16, height=16)
+        c.drawString(60, 400, "Ordinary text page with enough prose content to index here without any fallback.")
+        c.showPage()
+        c.save()
+        segments = pages_to_segments(parse_pdf(buffer.getvalue()))
+        assert all(s["kind"] != "image" for s in segments)
+
+
+@pytest.mark.skipif(
+    not os.environ.get("RUN_CAPTION_TESTS"),
+    reason="downloads the local captioning model; run with RUN_CAPTION_TESTS=1",
+)
+class TestImageCaptioning:
+    def test_local_captioner_describes_diagram(self, tmp_path):
+        image = Image.new("RGB", (500, 300), "white")
+        draw = ImageDraw.Draw(image)
+        draw.rectangle([50, 50, 450, 250], outline="blue", width=3)
+        draw.ellipse([200, 100, 300, 200], fill="green")
+        caption = pdf_parser._caption_image(image)
+        assert isinstance(caption, str) and caption.strip()
 
 
 @pytest.fixture(scope="module")

@@ -92,15 +92,27 @@ async def upload_document(
     # Extract text content
     file_type = ALLOWED_TYPES[content_type]
     text_content = _extract_text(content, file_type)
-    
+
+    # Multimodal PDF pass: page-aware text/table/image segments for
+    # ingestion plus rendered page screenshots for checkable citations.
+    doc_id = uuid.uuid4()
+    pdf_metadata = {}
+    if file_type == "pdf":
+        pdf_metadata = _build_pdf_metadata(content, str(doc_id))
+        if len((text_content or "").strip()) < 50 and pdf_metadata.get("pdf_segments"):
+            # Scanned or screenshot PDF: the readable content comes from the
+            # page-aware segments (tables, OCR, image descriptions).
+            text_content = "\n\n".join(
+                segment["content"] for segment in pdf_metadata["pdf_segments"]
+            )
+
     if not text_content or len(text_content.strip()) < 50:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Could not extract meaningful text from the file.",
         )
-    
+
     # Create document record
-    doc_id = uuid.uuid4()
     document = Document(
         id=doc_id,
         filename=file.filename or "unknown",
@@ -110,12 +122,8 @@ async def upload_document(
         status="uploaded",
         raw_content=text_content,
         uploaded_by=user_id,
+        doc_metadata=pdf_metadata,
     )
-
-    # Multimodal PDF pass: page-aware text/table segments for ingestion and
-    # rendered page screenshots so citations can be opened and checked.
-    if file_type == "pdf":
-        document.doc_metadata = _build_pdf_metadata(content, str(doc_id))
 
     db.add(document)
     await db.commit()
@@ -184,13 +192,14 @@ async def ingest_document(
         embeddings = await embedding_service.embed_batch(texts)
         
         # Store in pgvector
-        for chunk, embedding in zip(chunks, embeddings):
+        for index, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
             await vector_store.store_embedding(
                 chunk_id=chunk["chunk_id"],
                 document_id=str(document.id),
                 content=chunk["content"],
                 embedding=embedding,
                 metadata=chunk["metadata"],
+                chunk_index=chunk.get("chunk_index", index),
             )
         
         # Update document status
@@ -375,6 +384,11 @@ def _chunk_document(document: Document, base_metadata: dict) -> list:
                 },
             )
         )
+    # Renumber across segments: the chunker restarts its index per segment.
+    for index, chunk in enumerate(chunks):
+        chunk["chunk_index"] = index
+        chunk["metadata"]["chunk_index"] = index
+        chunk["metadata"]["chunk_total"] = len(chunks)
     return chunks
 
 

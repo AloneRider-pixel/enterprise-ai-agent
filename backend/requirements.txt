@@ -29,6 +29,11 @@ tiktoken==0.14.0
 # (both permissively licensed, fully offline)
 pdfplumber==0.11.10
 pypdfium2==5.14.0
+# OCR of screenshots/scanned pages (needs the system tesseract binary;
+# optional at runtime, skipped when unavailable)
+pytesseract==0.3.13
+# Image captions for diagrams use a local vit-gpt2 model via the
+# transformers install that sentence-transformers already brings in.
 
 # ─── Reranking ───
 sentence-transformers==6.2.0
