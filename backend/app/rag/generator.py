@@ -28,6 +28,7 @@ RULES:
 CITATION FORMAT:
 - Reference sources inline: "According to our policy [Source 1]..."
 - Multiple sources: "[Source 1][Source 3]"
+- When a source header names a page, mention it: "... [Source 1, page 3]"
 - Always include at least one citation when using context information."""
 
 
@@ -45,27 +46,56 @@ class RAGGenerator:
     def _build_context(self, chunks: List[Dict]) -> Tuple[str, List[Dict]]:
         """
         Build context string from retrieved chunks.
-        Returns formatted context and source citation list.
+        Returns formatted context and source citation list. Sources carry
+        filename, page number, content kind and a checkable page-image URL
+        when the chunk came from a page-aware PDF ingestion.
         """
         sources = []
         context_parts = []
-        
+
         for i, chunk in enumerate(chunks, 1):
+            metadata = chunk.get("metadata") or {}
+            document_id = chunk.get("document_id", "")
+            page_number = metadata.get("page_number")
+            kind = metadata.get("kind")
+            filename = metadata.get("filename")
+
             source = {
                 "source_number": i,
                 "chunk_id": chunk.get("chunk_id", ""),
-                "document_id": chunk.get("document_id", ""),
+                "document_id": document_id,
                 "content": chunk["content"],
                 "score": chunk.get("score", 0),
-                "metadata": chunk.get("metadata", {}),
+                "metadata": metadata,
+                "filename": filename,
+                "page_number": page_number,
+                "kind": kind,
+                "page_image_url": (
+                    f"/api/documents/{document_id}/pages/{page_number}/image"
+                    if document_id and page_number
+                    else None
+                ),
             }
             sources.append(source)
             context_parts.append(
-                f"[Source {i}] (Score: {chunk.get('score', 0):.3f})\n{chunk['content']}"
+                f"[Source {i}] ({self._source_label(source)})\n{chunk['content']}"
             )
 
         context = "\n\n---\n\n".join(context_parts)
         return context, sources
+
+    @staticmethod
+    def _source_label(source: Dict) -> str:
+        """Human-readable provenance label for a source header."""
+        parts = []
+        if source.get("filename"):
+            parts.append(str(source["filename"]))
+        if source.get("page_number"):
+            parts.append(f"page {source['page_number']}")
+        if source.get("kind") == "table":
+            parts.append("table")
+        parts.append(f"Score: {source.get('score', 0):.3f}")
+        return ", ".join(parts)
 
     def _build_messages(
         self,
@@ -168,8 +198,8 @@ Please answer the customer's question using ONLY the context above. Include sour
         messages = self._build_messages(query, context, conversation_history)
 
         try:
-            # Send citations first
-            yield f"data: {json.dumps({'event': 'citations', 'sources': [{'source_number': s['source_number'], 'document_id': s['document_id'], 'score': s['score']} for s in sources]})}\n\n"
+            # Send citations first (with page provenance when available)
+            yield f"data: {json.dumps({'event': 'citations', 'sources': [{'source_number': s['source_number'], 'document_id': s['document_id'], 'score': s['score'], 'filename': s.get('filename'), 'page_number': s.get('page_number'), 'kind': s.get('kind'), 'page_image_url': s.get('page_image_url')} for s in sources]})}\n\n"
 
             # Stream response tokens
             stream = await openai_client.chat.completions.create(

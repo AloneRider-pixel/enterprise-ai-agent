@@ -9,6 +9,7 @@ Production-oriented reference implementation for an enterprise AI support agent.
 ## What the project demonstrates
 
 - **Grounded RAG:** PDF/TXT/DOCX/Markdown ingestion, chunking, embeddings, hybrid retrieval, reranking, and citations.
+- **Multimodal PDF ingestion:** page-aware text and table extraction (tables become Markdown segments), rendered page screenshots, and citations that carry filename + page number + a link to open the original page image and check the evidence.
 - **Agent orchestration:** LangGraph state management with bounded tool execution for support workflows.
 - **Security boundaries:** JWT authentication, role checks, rate limiting, prompt-injection defenses, bounded uploads, and owner-scoped resources.
 - **Evaluation:** faithfulness, answer relevance, context recall, precision, latency, and cost instrumentation.
@@ -123,6 +124,7 @@ Checked-in evaluation fixtures provide reproducible engineering tests; they are 
 - The evaluation corpus is intentionally small (5 checked-in cases across 4 categories), and the metric helpers are heuristic proxies, not model-graded judgments. Evaluation runs the local metric helpers; Ragas is not a runtime dependency. The JSON integrity fixture above has 5 cases, while the runtime evaluator uses 10 built-in samples from `backend/app/evaluation/dataset.py`. These are separate corpora.
 - Prompt-injection safeguards are heuristic pattern checks; their presence is a code feature, not measured protection.
 - Live answers require an OpenAI API key; the test suite runs without external calls.
+- Scanned (image-only) PDFs yield no text segments: there is no OCR step. Page screenshots still render, and table detection targets line-bordered tables.
 
 ## Embedded ForgeAI
 

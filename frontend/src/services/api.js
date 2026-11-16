@@ -104,6 +104,18 @@ export const api = {
     return res.json()
   },
 
+  async openPageImage(documentId, pageNumber) {
+    // Fetch the rendered PDF page with the auth token and open it in a new
+    // tab as a blob URL, so the citation evidence is checkable by the user.
+    const res = await fetch(
+      `${API_BASE}/documents/${documentId}/pages/${pageNumber}/image`,
+      { headers: getHeaders() }
+    )
+    if (!res.ok) throw new Error('Page image unavailable')
+    const blobUrl = URL.createObjectURL(await res.blob())
+    window.open(blobUrl, '_blank', 'noopener')
+  },
+
   async deleteDocument(documentId) {
     const res = await fetch(`${API_BASE}/documents/${documentId}`, {
       method: 'DELETE',

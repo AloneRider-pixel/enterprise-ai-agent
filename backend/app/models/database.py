@@ -37,7 +37,9 @@ class Document(Base):
     uploaded_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    # Column is named "metadata" in the database; the ORM attribute is renamed
+    # because "metadata" is reserved by the SQLAlchemy Declarative API.
+    doc_metadata: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
 
 
 class DocumentChunk(Base):
@@ -48,7 +50,9 @@ class DocumentChunk(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(1536), nullable=True)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    # Column is named "metadata" in the database; the ORM attribute is renamed
+    # because "metadata" is reserved by the SQLAlchemy Declarative API.
+    chunk_metadata: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

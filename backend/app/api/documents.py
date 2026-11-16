@@ -4,21 +4,31 @@ Handles document upload, ingestion, and lifecycle management.
 """
 import hashlib
 import logging
+import shutil
 import uuid
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
+from app.config import settings
 from app.database import get_db, vector_store
 from app.models.database import Document
 from app.models.schemas import DocumentListItem, DocumentStatus, DocumentUploadResponse
 from app.rag.chunking import text_chunker
 from app.rag.embeddings import embedding_service
+from app.rag.pdf_parser import (
+    PDFParseError,
+    pages_to_segments,
+    parse_pdf,
+    render_page_images,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +111,12 @@ async def upload_document(
         raw_content=text_content,
         uploaded_by=user_id,
     )
-    
+
+    # Multimodal PDF pass: page-aware text/table segments for ingestion and
+    # rendered page screenshots so citations can be opened and checked.
+    if file_type == "pdf":
+        document.doc_metadata = _build_pdf_metadata(content, str(doc_id))
+
     db.add(document)
     await db.commit()
     await db.refresh(document)
@@ -152,16 +167,13 @@ async def ingest_document(
     await db.commit()
     
     try:
-        # Chunk the text
-        chunks = text_chunker.chunk_text(
-            document.raw_content,
-            metadata={
-                "document_id": str(document.id),
-                "filename": document.filename,
-                "file_type": document.file_type,
-            },
-        )
-        
+        base_metadata = {
+            "document_id": str(document.id),
+            "filename": document.filename,
+            "file_type": document.file_type,
+        }
+        chunks = _chunk_document(document, base_metadata)
+
         if not chunks:
             document.status = "failed"
             await db.commit()
@@ -259,9 +271,111 @@ async def delete_document(
     await vector_store.delete_document_chunks(document_id)
     await db.delete(document)
     await db.commit()
-    
+
+    # Remove rendered page images, if any.
+    shutil.rmtree(
+        Path(settings.page_image_dir) / str(document.id), ignore_errors=True
+    )
+
     logger.info(f"Document deleted: {document.filename}")
     return {"status": "deleted", "document_id": document_id}
+
+
+@router.get("/{document_id}/pages/{page_number}/image")
+async def get_page_image(
+    document_id: str,
+    page_number: int,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Serve the rendered screenshot of one PDF page.
+    Lets a user open the original page behind a citation to check the evidence.
+    """
+    try:
+        document_uuid = uuid.UUID(document_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid document ID")
+
+    if page_number < 1:
+        raise HTTPException(status_code=400, detail="Invalid page number")
+
+    user_id = uuid.UUID(current_user["user_id"])
+    result = await db.execute(
+        select(Document).where(
+            Document.id == document_uuid,
+            Document.uploaded_by == user_id,
+        )
+    )
+    document = result.scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    image_path = (
+        Path(settings.page_image_dir) / str(document.id) / f"page-{page_number}.png"
+    )
+    if not image_path.is_file():
+        raise HTTPException(status_code=404, detail="Page image not found")
+
+    return FileResponse(image_path, media_type="image/png")
+
+
+def _build_pdf_metadata(content: bytes, document_id: str) -> dict:
+    """
+    Parse a PDF into page-aware segments and render page screenshots.
+    Falls back to an empty page structure so flat-text ingestion still works
+    when the page-aware parse fails.
+    """
+    try:
+        parsed = parse_pdf(content)
+    except PDFParseError as e:
+        logger.warning(f"Page-aware PDF parse failed, flat text only: {e}")
+        return {}
+
+    rendered_pages = []
+    try:
+        rendered = render_page_images(
+            content,
+            document_id,
+            settings.page_image_dir,
+            max_pages=settings.max_render_pages,
+        )
+        rendered_pages = sorted(rendered.keys())
+    except PDFParseError as e:
+        logger.warning(f"PDF page rendering failed: {e}")
+
+    return {
+        "page_count": parsed.page_count,
+        "rendered_pages": rendered_pages,
+        "pdf_segments": pages_to_segments(parsed),
+    }
+
+
+def _chunk_document(document: Document, base_metadata: dict) -> list:
+    """
+    Chunk a document for ingestion. PDFs parsed into page-aware segments keep
+    their page number and kind (text/table) on every chunk; other files use
+    the flat raw text.
+    """
+    segments = (document.doc_metadata or {}).get("pdf_segments") or []
+
+    if not segments:
+        return text_chunker.chunk_text(document.raw_content, metadata=base_metadata)
+
+    chunks = []
+    for segment in segments:
+        chunks.extend(
+            text_chunker.chunk_text(
+                segment["content"],
+                metadata={
+                    **base_metadata,
+                    "page_number": segment["page_number"],
+                    "kind": segment["kind"],
+                },
+            )
+        )
+    return chunks
 
 
 def _extract_text(content: bytes, file_type: str) -> str:

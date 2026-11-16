@@ -1,8 +1,14 @@
 import React from 'react'
+import { api } from '../services/api'
 
 function Message({ message }) {
   const isUser = message.role === 'user'
   const isError = message.isError
+
+  const openCitation = (cite) => {
+    if (!cite.document_id || !cite.page_number) return
+    api.openPageImage(cite.document_id, cite.page_number).catch(() => {})
+  }
 
   return (
     <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -25,17 +31,35 @@ function Message({ message }) {
           <div className="whitespace-pre-wrap">{message.content}</div>
         </div>
 
-        {/* Citations */}
+        {/* Citations: page-tagged chips open the original PDF page image */}
         {!isUser && message.citations && message.citations.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
-            {message.citations.slice(0, 3).map((cite, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100"
-              >
-                📄 Source {cite.source_number || i + 1}
-              </span>
-            ))}
+            {message.citations.slice(0, 3).map((cite, i) => {
+              const checkable = Boolean(cite.document_id && cite.page_number)
+              const label = `📄 Source ${cite.source_number || i + 1}${
+                cite.filename ? ` · ${cite.filename}` : ''
+              }${cite.page_number ? ` · p.${cite.page_number}` : ''}${
+                cite.kind === 'table' ? ' · table' : ''
+              }`
+              return checkable ? (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => openCitation(cite)}
+                  title="Open the original PDF page to check this source"
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 cursor-pointer"
+                >
+                  {label}
+                </button>
+              ) : (
+                <span
+                  key={i}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100"
+                >
+                  {label}
+                </span>
+              )
+            })}
           </div>
         )}
 
