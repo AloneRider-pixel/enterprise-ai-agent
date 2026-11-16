@@ -33,7 +33,7 @@ function Login({ onLogin }) {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">🤖</span>
+            <span className="text-2xl text-white">AI</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Enterprise AI Agent</h1>
           <p className="text-gray-500 mt-1">RAG + LangGraph Support Platform</p>
@@ -118,19 +118,15 @@ function Login({ onLogin }) {
         {/* Features */}
         <div className="mt-6 grid grid-cols-2 gap-3 text-center">
           <div className="bg-white/70 rounded-lg p-3">
-            <span className="text-lg">🔍</span>
             <p className="text-xs text-gray-600 mt-1">RAG Retrieval</p>
           </div>
           <div className="bg-white/70 rounded-lg p-3">
-            <span className="text-lg">🛠️</span>
             <p className="text-xs text-gray-600 mt-1">Tool Calling</p>
           </div>
           <div className="bg-white/70 rounded-lg p-3">
-            <span className="text-lg">📊</span>
             <p className="text-xs text-gray-600 mt-1">Citations</p>
           </div>
           <div className="bg-white/70 rounded-lg p-3">
-            <span className="text-lg">🔒</span>
             <p className="text-xs text-gray-600 mt-1">Secure</p>
           </div>
         </div>

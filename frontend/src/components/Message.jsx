@@ -16,7 +16,7 @@ function Message({ message }) {
       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${
         isUser ? 'bg-gray-200' : 'bg-primary-100'
       }`}>
-        {isUser ? '👤' : '🤖'}
+        {isUser ? 'You' : 'AI'}
       </div>
 
       {/* Message Content */}
@@ -34,12 +34,12 @@ function Message({ message }) {
         {/* Citations: page-tagged chips open the original PDF page image */}
         {!isUser && message.citations && message.citations.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
-            {message.citations.slice(0, 3).map((cite, i) => {
+            {message.citations.map((cite, i) => {
               const checkable = Boolean(cite.document_id && cite.page_number)
-              const label = `📄 Source ${cite.source_number || i + 1}${
+              const label = `Source ${cite.source_number || i + 1}${
                 cite.filename ? ` · ${cite.filename}` : ''
               }${cite.page_number ? ` · p.${cite.page_number}` : ''}${
-                cite.kind === 'table' ? ' · table' : ''
+                ['table', 'image'].includes(cite.kind) ? ` · ${cite.kind}` : ''
               }`
               return checkable ? (
                 <button
@@ -71,7 +71,7 @@ function Message({ message }) {
                 key={i}
                 className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-100"
               >
-                🔧 {tc.tool}
+                 {tc.tool}
               </span>
             ))}
           </div>
@@ -80,7 +80,7 @@ function Message({ message }) {
         {/* Metadata */}
         {!isUser && message.metadata && message.metadata.latency_ms && (
           <div className="mt-1 text-xs text-gray-400">
-            ⏱ {Math.round(message.metadata.latency_ms)}ms
+            Time: {Math.round(message.metadata.latency_ms)}ms
             {message.metadata.retrieval_method && ` • ${message.metadata.retrieval_method} retrieval`}
             {message.metadata.chunks_retrieved > 0 && ` • ${message.metadata.chunks_retrieved} chunks`}
           </div>

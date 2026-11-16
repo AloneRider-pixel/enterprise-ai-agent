@@ -9,7 +9,7 @@ Production-oriented reference implementation for an enterprise AI support agent.
 ## What the project demonstrates
 
 - **Grounded RAG:** PDF/TXT/DOCX/Markdown ingestion, chunking, embeddings, hybrid retrieval, reranking, and citations.
-- **Multimodal PDF ingestion:** page-aware text and table extraction (tables become Markdown segments), rendered page screenshots, and citations that carry filename + page number + a link to open the original page image and check the evidence.
+- **Evidence-linked PDFs:** page-aware text, Markdown tables, and OCR of embedded screenshots/scanned pages. Optional local image captions aid retrieval. Citations name the file and page and open its rendered image for checking.
 - **Agent orchestration:** LangGraph state management with bounded tool execution for support workflows.
 - **Security boundaries:** JWT authentication, role checks, rate limiting, prompt-injection defenses, bounded uploads, and owner-scoped resources.
 - **Evaluation:** faithfulness, answer relevance, context recall, precision, latency, and cost instrumentation.
@@ -124,7 +124,10 @@ Checked-in evaluation fixtures provide reproducible engineering tests; they are 
 - The evaluation corpus is intentionally small (5 checked-in cases across 4 categories), and the metric helpers are heuristic proxies, not model-graded judgments. Evaluation runs the local metric helpers; Ragas is not a runtime dependency. The JSON integrity fixture above has 5 cases, while the runtime evaluator uses 10 built-in samples from `backend/app/evaluation/dataset.py`. These are separate corpora.
 - Prompt-injection safeguards are heuristic pattern checks; their presence is a code feature, not measured protection.
 - Live answers require an OpenAI API key; the test suite runs without external calls.
-- Scanned (image-only) PDFs yield no text segments: there is no OCR step. Page screenshots still render, and table detection targets line-bordered tables.
+- OCR requires the system Tesseract executable (for example, `apt install tesseract-ocr` on Ubuntu) plus the Python dependencies. Without it, image text is not read. `ENABLE_PDF_OCR=false` disables OCR. Tables work best with clear grid lines.
+- Optional image captions use `nlpconnect/vit-gpt2-image-captioning`, downloaded on first use. Set `ENABLE_PDF_IMAGE_CAPTIONS=false` to avoid that download. Captions can be wrong and do not provide reliable diagram or chart reasoning.
+- API-generated answers and embeddings require an OpenAI key and may cost money. The included UI smoke test uses a marked transport fixture and hashing vectors: it verifies plumbing, source identity, OCR evidence flow, and page opening, not model answer quality. Actual OpenAI answer/embedding quality has not been validated for this feature.
+- Python dependencies were installed in a fresh Python 3.10 environment using `pip install -r backend/requirements.txt`; `backend/requirements-lock.txt` records the complete tested resolution (`pip install -r backend/requirements-lock.txt`); CPU-only Torch wheels use the declared PyTorch package index. PostgreSQL 14 with pgvector 0.7.4 was used for the database checks. New and existing IVFFlat indexes are switched to HNSW at schema initialization (pgvector >=0.5 required).
 
 ## Embedded ForgeAI
 

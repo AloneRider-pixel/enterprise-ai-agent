@@ -85,7 +85,7 @@ function DocumentUpload() {
         {/* Upload Section */}
         <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            📄 Document Management
+             Document Management
           </h2>
           <p className="text-sm text-gray-500 mb-4">
             Upload documents to add them to the knowledge base. Supported formats: PDF, TXT, DOCX, Markdown.
@@ -105,7 +105,7 @@ function DocumentUpload() {
               className="cursor-pointer"
             >
               <div className="text-3xl mb-2">
-                {uploading ? '⏳' : '📁'}
+                {uploading ? '...' : 'Upload'}
               </div>
               <p className="text-sm font-medium text-gray-700">
                 {uploading ? 'Uploading & Processing...' : 'Click to upload or drag & drop'}
@@ -142,7 +142,7 @@ function DocumentUpload() {
                 <div key={doc.document_id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
                   <div className="flex items-center gap-3">
                     <span className="text-xl">
-                      {doc.file_type === 'pdf' ? '📕' : doc.file_type === 'docx' ? '📘' : '📄'}
+                      {(doc.file_type || doc.filename?.split('.').pop() || 'file').toUpperCase()}
                     </span>
                     <div>
                       <p className="text-sm font-medium text-gray-800">{doc.filename}</p>

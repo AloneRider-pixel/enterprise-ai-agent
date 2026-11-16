@@ -59,3 +59,17 @@ class TestCitationMetadata:
         del chunk["metadata"]
         _, sources = self.generator._build_context([chunk])
         assert sources[0]["page_image_url"] is None
+
+
+def test_source_identity_follows_retrieval_order_not_page_order():
+    generator = RAGGenerator()
+    image = _chunk(chunk_id='image-2', metadata={
+        'filename': 'handbook.pdf', 'page_number': 2, 'kind': 'image'})
+    text = _chunk(chunk_id='text-1')
+    for chunks in ([image, text], [text, image]):
+        context, sources = generator._build_context(chunks)
+        for number, (chunk, source) in enumerate(zip(chunks, sources), 1):
+            assert source['source_number'] == number
+            assert source['chunk_id'] == chunk['chunk_id']
+            assert source['page_number'] == chunk['metadata']['page_number']
+            assert f"[Source {number}] (handbook.pdf, page {source['page_number']}" in context

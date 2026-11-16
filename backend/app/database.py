@@ -72,6 +72,14 @@ async def init_database():
         await conn.execute("""
             DO $$
             BEGIN
+                -- Upgrade the old empty-table IVFFlat index as well as fresh installs.
+                IF EXISTS (
+                    SELECT 1 FROM pg_indexes
+                    WHERE schemaname = 'public' AND indexname = 'chunk_embedding_idx'
+                    AND indexdef ILIKE '%USING ivfflat%'
+                ) THEN
+                    DROP INDEX public.chunk_embedding_idx;
+                END IF;
                 IF NOT EXISTS (
                     SELECT 1 FROM pg_indexes
                     WHERE tablename = 'document_chunks' AND indexname = 'chunk_embedding_idx'

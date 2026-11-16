@@ -78,7 +78,7 @@ function ChatWindow() {
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
         {messages.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-4xl mb-4">🤖</div>
+
             <h2 className="text-xl font-semibold text-gray-800 mb-2">
               Enterprise AI Support Agent
             </h2>
@@ -105,7 +105,7 @@ function ChatWindow() {
         
         {isLoading && (
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm">🤖</div>
+            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-sm">AI</div>
             <div className="bg-white rounded-lg px-4 py-3 shadow-sm border">
               <div className="typing-indicator">
                 <span></span><span></span><span></span>
@@ -138,7 +138,7 @@ function ChatWindow() {
           </button>
         </div>
         <p className="text-xs text-gray-400 text-center mt-2">
-          Responses are AI-generated and verified against the knowledge base.
+          AI answers can be wrong. Open the source pages to check the evidence.
         </p>
       </div>
     </div>
