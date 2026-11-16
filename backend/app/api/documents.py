@@ -324,8 +324,12 @@ async def get_page_image(
     # Resolve and check containment before touching the filesystem. UUID/int
     # validation alone does not protect against symlinks in the image cache.
     image_root = Path(settings.page_image_dir).resolve()
+    # Reconstruct both components from parsed scalar values, rather than
+    # interpolating request strings (also makes the sanitizer explicit to SAST).
+    cache_document_id = str(uuid.UUID(str(document.id)))
+    cache_page_number = int(page_number)
     image_path = (
-        image_root / str(document.id) / f"page-{page_number}.png"
+        image_root / cache_document_id / f"page-{cache_page_number:d}.png"
     ).resolve()
     if not image_path.is_relative_to(image_root):
         raise HTTPException(status_code=404, detail="Page image not found")
