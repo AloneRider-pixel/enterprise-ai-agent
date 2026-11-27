@@ -18,6 +18,7 @@ class RedisClient:
 
     def __init__(self):
         self.client: Optional[redis.Redis] = None
+        self._local_hits: Dict[str, List[float]] = {}
 
     async def connect(self):
         """Initialize Redis connection."""
@@ -149,11 +150,10 @@ class RedisClient:
         Check and update rate limit using sliding window.
         Returns dict with 'allowed', 'remaining', 'reset_at'.
         """
-        if not self.client:
-            return {"allowed": True, "remaining": max_requests or 60, "reset_at": 0}
-
         max_requests = max_requests or settings.rate_limit_requests
         window_seconds = window_seconds or settings.rate_limit_window_seconds
+        if not self.client:
+            return self._local_rate_limit(user_id, max_requests, window_seconds)
         key = f"ratelimit:{user_id}"
         now = time.time()
         window_start = now - window_seconds
@@ -183,8 +183,35 @@ class RedisClient:
                 "request_count": request_count,
             }
         except Exception as e:
-            logger.warning(f"Rate limit check error: {e}")
-            return {"allowed": True, "remaining": max_requests, "reset_at": 0}
+            logger.warning(f"Rate limit check error: {type(e).__name__}")
+            return self._local_rate_limit(user_id, max_requests, window_seconds)
+
+    def _local_rate_limit(
+        self, user_id: str, max_requests: int, window_seconds: int
+    ) -> Dict[str, Any]:
+        """In-process sliding window used when Redis is unavailable.
+
+        Per-process only (not shared across instances) but keeps abuse bounded
+        instead of failing open. Memory is bounded by pruning idle keys.
+        """
+        now = time.time()
+        window_start = now - window_seconds
+        hits = self._local_hits
+        if len(hits) > 10000:
+            for k in [k for k, v in hits.items() if not v or v[-1] < window_start]:
+                hits.pop(k, None)
+            if len(hits) > 10000:
+                hits.clear()
+        bucket = [t for t in hits.get(user_id, []) if t > window_start]
+        bucket.append(now)
+        hits[user_id] = bucket
+        count = len(bucket)
+        return {
+            "allowed": count <= max_requests,
+            "remaining": max(0, max_requests - count),
+            "reset_at": bucket[0] + window_seconds,
+            "request_count": count,
+        }
 
     # ─── Metrics ───
 
