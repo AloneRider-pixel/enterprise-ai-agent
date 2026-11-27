@@ -18,6 +18,7 @@ from app.database import get_db, vector_store
 from app.models.database import Document
 from app.models.schemas import DocumentListItem, DocumentStatus, DocumentUploadResponse
 from app.rag.chunking import text_chunker
+from app.redis_client import redis_client
 from app.rag.embeddings import embedding_service
 
 logger = logging.getLogger(__name__)
@@ -169,6 +170,13 @@ async def ingest_document(
         
         # Generate embeddings in batch
         texts = [chunk["content"] for chunk in chunks]
+        if not await redis_client.reserve_model_calls(len(texts)):
+            document.status = "failed"
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Daily demo capacity reached. Try again tomorrow.",
+            )
         embeddings = await embedding_service.embed_batch(texts)
         
         # Store in pgvector
@@ -196,6 +204,8 @@ async def ingest_document(
             "total_tokens": sum(c["metadata"].get("token_count", 0) for c in chunks),
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Ingestion failed: {e}")
         document.status = "failed"
