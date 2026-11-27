@@ -29,6 +29,8 @@ class HallucinationDetector:
     def _load_nli_model(self):
         """Lazy-load NLI model for entailment detection."""
         if self._nli_model is None:
+            if settings.disable_local_models:
+                return
             try:
                 from sentence_transformers import CrossEncoder
                 self._nli_model = CrossEncoder("cross-encoder/nli-deberta-v3-small")
