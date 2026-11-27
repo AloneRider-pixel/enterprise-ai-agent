@@ -29,6 +29,8 @@ class RerankerService:
     def _load_model(self):
         """Lazy-load the cross-encoder model."""
         if self._model is None:
+            if settings.disable_local_models:
+                return
             try:
                 from sentence_transformers import CrossEncoder
                 self._model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
