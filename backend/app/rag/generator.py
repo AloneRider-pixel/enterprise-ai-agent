@@ -155,6 +155,13 @@ Please answer the customer's question using ONLY the context above. Include sour
 
             content = response.choices[0].message.content
             usage = response.usage
+            if not content or not str(content).strip():
+                # Some models can return no text (e.g. only reasoning tokens).
+                logger.error(
+                    f"Generation returned empty content: model={self.model} "
+                    f"finish_reason={getattr(response.choices[0], 'finish_reason', None)}"
+                )
+                content = "I couldn't generate an answer just now. Please try again or contact a human agent."
 
             return {
                 "response": content,
