@@ -72,6 +72,12 @@ class Settings(BaseSettings):
     rerank_top_n: int = Field(default=4)
     similarity_threshold: float = Field(default=0.7)
 
+    # ─── Local ML models ───
+    # On small hosts (e.g. 512 MB) loading torch cross-encoders exhausts memory.
+    # When true, reranking and hallucination scoring use their built-in
+    # heuristic fallbacks instead.
+    disable_local_models: bool = Field(default=False, alias="DISABLE_LOCAL_MODELS")
+
     # ─── Hallucination Detection ───
     hallucination_threshold: float = Field(default=0.7, alias="HALLUCINATION_THRESHOLD")
 
