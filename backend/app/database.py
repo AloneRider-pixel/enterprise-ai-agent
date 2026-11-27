@@ -142,6 +142,19 @@ class VectorStore:
             metadata or {},
         )
 
+    async def _fetch_exact(self, sql: str, *args):
+        """Run a vector query with every ivfflat list probed.
+
+        init_database builds the ivfflat index (lists=100) on an empty table.
+        With the default ivfflat.probes=1 such an index returns few or no rows
+        for small tables. Probing all lists keeps results exact; at demo scale
+        the cost is negligible. Applies only inside this transaction.
+        """
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute("SET LOCAL ivfflat.probes = 100")
+                return await conn.fetch(sql, *args)
+
     async def vector_search(
         self,
         query_embedding: List[float],
@@ -149,7 +162,7 @@ class VectorStore:
         similarity_threshold: float = 0.7,
     ) -> List[dict]:
         """Semantic similarity search using pgvector."""
-        rows = await self.pool.fetch(
+        rows = await self._fetch_exact(
             """
             SELECT
                 id,
@@ -197,7 +210,7 @@ class VectorStore:
         keyword_weight: float = 0.3,
     ) -> List[dict]:
         """Combined vector + keyword retrieval with score fusion."""
-        rows = await self.pool.fetch(
+        rows = await self._fetch_exact(
             """
             WITH vector_results AS (
                 SELECT

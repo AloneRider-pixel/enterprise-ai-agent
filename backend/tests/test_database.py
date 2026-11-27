@@ -16,6 +16,21 @@ class RecordingPool:
         self.arguments = arguments
         return []
 
+    async def execute(self, query, *arguments):
+        return None
+
+    def transaction(self):
+        return self
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    def acquire(self):
+        return self
+
 
 @pytest.mark.asyncio
 async def test_hybrid_search_ranks_keyword_candidates_before_fusion():
