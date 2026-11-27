@@ -186,32 +186,6 @@ class RedisClient:
             logger.warning(f"Rate limit check error: {e}")
             return {"allowed": True, "remaining": max_requests, "reset_at": 0}
 
-    # ─── Global daily model-call cap (fails closed) ───
-
-    async def reserve_model_calls(self, units: int = 1) -> bool:
-        """Reserve `units` of the global daily model-call budget.
-
-        Returns True when no cap is configured or the units fit under the cap.
-        With a cap configured, returns False if Redis is unavailable or errors.
-        """
-        cap = settings.daily_model_call_cap
-        if not cap or cap <= 0:
-            return True
-        if not self.client:
-            return False
-        try:
-            key = f"modelcalls:{time.strftime('%Y%m%d', time.gmtime())}"
-            used = await self.client.incrby(key, units)
-            if used == units:
-                await self.client.expire(key, 172800)
-            if used > cap:
-                await self.client.decrby(key, units)
-                return False
-            return True
-        except Exception as e:
-            logger.warning(f"Model-call cap check error (failing closed): {e}")
-            return False
-
     # ─── Metrics ───
 
     async def increment_counter(self, name: str, amount: int = 1):
