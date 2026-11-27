@@ -69,6 +69,13 @@ async def chat(
             headers={"X-RateLimit-Remaining": "0"},
         )
     
+    # Global daily model-call cap (no-op unless DAILY_MODEL_CALL_CAP is set)
+    if not await redis_client.reserve_model_calls(1):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Daily demo capacity reached. Try again tomorrow.",
+        )
+
     # Initialize agent state
     initial_state: AgentState = {
         "messages": [],

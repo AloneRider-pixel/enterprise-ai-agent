@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     rate_limit_requests: int = Field(default=60, alias="RATE_LIMIT_REQUESTS")
     rate_limit_window_seconds: int = Field(default=60, alias="RATE_LIMIT_WINDOW_SECONDS")
 
+    # ─── Public-access controls (both optional; unset keeps current behaviour) ───
+    # When set, POST /api/auth/register requires a matching X-Invite-Code header.
+    registration_invite_code: str | None = Field(default=None, alias="REGISTRATION_INVITE_CODE")
+    # When set (> 0), total model-call units per UTC day across all users. Fails closed.
+    daily_model_call_cap: int | None = Field(default=None, alias="DAILY_MODEL_CALL_CAP")
+
     # ─── RAG Configuration ───
     chunk_size: int = Field(default=512)
     chunk_overlap: int = Field(default=64)

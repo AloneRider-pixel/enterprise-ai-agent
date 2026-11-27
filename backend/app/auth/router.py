@@ -2,11 +2,12 @@
 Authentication API routes.
 Handles user registration, login, and token management.
 """
+import hmac
 import logging
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,8 +28,20 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
-async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
-    """Register a new user account."""
+async def register(
+    user_data: UserRegister,
+    db: AsyncSession = Depends(get_db),
+    x_invite_code: str | None = Header(default=None),
+):
+    """Register a new user account (invite code required when configured)."""
+    required = settings.registration_invite_code
+    if required and not hmac.compare_digest(
+        (x_invite_code or "").encode(), required.encode()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is invite-only",
+        )
     # Check if email already exists
     result = await db.execute(select(User).where(User.email == user_data.email))
     existing = result.scalar_one_or_none()
