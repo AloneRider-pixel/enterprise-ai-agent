@@ -22,6 +22,7 @@ from app.database import get_db
 from app.models.database import ChatSession, QueryLog
 from app.models.schemas import ChatMessage, ChatResponse, ConversationHistory
 from app.redis_client import redis_client
+from app.usage_cap import reserve_model_calls
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ async def chat(
         )
     
     # Global daily model-call cap (no-op unless DAILY_MODEL_CALL_CAP is set)
-    if not await redis_client.reserve_model_calls(1):
+    if not await reserve_model_calls(1):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Daily demo capacity reached. Try again tomorrow.",
