@@ -206,8 +206,8 @@ async def _stream_response(initial_state, session_id, current_user, db):
         )
     
     except Exception as e:
-        logger.error(f"Streaming error: {e}")
-        yield f"data: {json.dumps({'event': 'error', 'message': str(e)})}\n\n"
+        logger.error(f"Streaming error: type={type(e).__name__}")
+        yield f"data: {json.dumps({'event': 'error', 'message': 'An error occurred while generating the response.'})}\n\n"
 
 
 async def _log_query(
