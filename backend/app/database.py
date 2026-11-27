@@ -1,6 +1,8 @@
 """PostgreSQL database setup with pgvector support.
 Handles connection pooling, table creation, and vector operations.
 """
+import json
+import uuid
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, List, Optional
@@ -84,6 +86,13 @@ async def init_database():
         await conn.close()
 
 
+async def _init_connection(conn):
+    """Make jsonb columns round-trip as Python dicts."""
+    await conn.set_type_codec(
+        "jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog"
+    )
+
+
 class VectorStore:
     """Direct pgvector operations for RAG pipeline."""
 
@@ -96,6 +105,7 @@ class VectorStore:
             settings.database_url,
             min_size=5,
             max_size=20,
+            init=_init_connection,
         )
 
     async def disconnect(self):
@@ -114,19 +124,22 @@ class VectorStore:
         """Store a chunk embedding in pgvector."""
         await self.pool.execute(
             """
-            INSERT INTO document_chunks (id, document_id, content, embedding, metadata)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO document_chunks
+                (id, document_id, content, embedding, chunk_index, metadata, created_at, updated_at)
+            VALUES ($1, $2, $3, $4::vector, $5, $6, NOW(), NOW())
             ON CONFLICT (id) DO UPDATE SET
                 content = EXCLUDED.content,
                 embedding = EXCLUDED.embedding,
+                chunk_index = EXCLUDED.chunk_index,
                 metadata = EXCLUDED.metadata,
                 updated_at = NOW()
             """,
-            chunk_id,
-            document_id,
+            uuid.UUID(str(chunk_id)),
+            uuid.UUID(str(document_id)),
             content,
             str(embedding),
-            metadata,
+            int((metadata or {}).get("chunk_index", 0)),
+            metadata or {},
         )
 
     async def vector_search(
