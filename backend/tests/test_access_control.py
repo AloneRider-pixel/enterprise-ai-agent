@@ -6,27 +6,9 @@ from httpx import ASGITransport, AsyncClient
 
 from app.config import settings
 from app.main import app
-from app.redis_client import RedisClient
-
-
-class FakeRedis:
-    """Minimal in-memory stand-in for the Redis calls the cap uses."""
-
-    def __init__(self, fail=False):
-        self.store = {}
-        self.fail = fail
-
-    async def incrby(self, key, n):
-        if self.fail:
-            raise RuntimeError("redis down")
-        self.store[key] = self.store.get(key, 0) + n
-        return self.store[key]
-
-    async def decrby(self, key, n):
-        self.store[key] -= n
-
-    async def expire(self, key, ttl):
-        return True
+from app import usage_cap
+from app.database import engine
+from sqlalchemy import text
 
 
 @pytest.fixture
@@ -62,27 +44,53 @@ async def test_register_accepted_with_correct_code(client, monkeypatch):
     assert r.status_code == 201
 
 
+async def _reset():
+    async with engine.begin() as conn:
+        await conn.execute(usage_cap._CREATE)
+        await conn.execute(text("DELETE FROM model_call_usage"))
+
+
+async def _used():
+    async with engine.begin() as conn:
+        return (await conn.execute(text("SELECT COALESCE(SUM(used),0) FROM model_call_usage"))).scalar()
+
+
 async def test_cap_unset_allows(monkeypatch):
     monkeypatch.setattr(settings, "daily_model_call_cap", None)
-    c = RedisClient()
-    c.client = None
-    assert await c.reserve_model_calls(5) is True
+    assert await usage_cap.reserve_model_calls(5) is True
 
 
-async def test_cap_enforced_globally(monkeypatch):
+async def test_cap_enforced_and_rejection_leaves_counter(monkeypatch):
     monkeypatch.setattr(settings, "daily_model_call_cap", 3)
-    c = RedisClient()
-    c.client = FakeRedis()
-    assert await c.reserve_model_calls(2) is True
-    assert await c.reserve_model_calls(1) is True
-    assert await c.reserve_model_calls(1) is False
-    assert list(c.client.store.values()) == [3]  # rejected units are released
+    await _reset()
+    assert await usage_cap.reserve_model_calls(2) is True
+    assert await usage_cap.reserve_model_calls(1) is True
+    assert await usage_cap.reserve_model_calls(1) is False
+    assert await _used() == 3
 
 
-async def test_cap_fails_closed_without_redis(monkeypatch):
+async def test_oversized_first_request_denied(monkeypatch):
     monkeypatch.setattr(settings, "daily_model_call_cap", 3)
-    c = RedisClient()
-    c.client = None
-    assert await c.reserve_model_calls(1) is False
-    c.client = FakeRedis(fail=True)
-    assert await c.reserve_model_calls(1) is False
+    await _reset()
+    assert await usage_cap.reserve_model_calls(4) is False
+    assert await _used() == 0
+
+
+async def test_concurrent_reservations_never_exceed_cap(monkeypatch):
+    import asyncio
+    monkeypatch.setattr(settings, "daily_model_call_cap", 5)
+    await _reset()
+    res = await asyncio.gather(*[usage_cap.reserve_model_calls(1) for _ in range(20)])
+    assert sum(res) == 5
+    assert await _used() == 5
+
+
+async def test_cap_fails_closed_on_db_error(monkeypatch):
+    monkeypatch.setattr(settings, "daily_model_call_cap", 3)
+
+    class Boom:
+        def begin(self):
+            raise RuntimeError("db down")
+
+    monkeypatch.setattr(usage_cap, "engine", Boom())
+    assert await usage_cap.reserve_model_calls(1) is False

@@ -18,7 +18,7 @@ from app.database import get_db, vector_store
 from app.models.database import Document
 from app.models.schemas import DocumentListItem, DocumentStatus, DocumentUploadResponse
 from app.rag.chunking import text_chunker
-from app.redis_client import redis_client
+from app.usage_cap import reserve_model_calls
 from app.rag.embeddings import embedding_service
 
 logger = logging.getLogger(__name__)
@@ -170,7 +170,7 @@ async def ingest_document(
         
         # Generate embeddings in batch
         texts = [chunk["content"] for chunk in chunks]
-        if not await redis_client.reserve_model_calls(len(texts)):
+        if not await reserve_model_calls(len(texts)):
             document.status = "failed"
             await db.commit()
             raise HTTPException(
