@@ -14,6 +14,33 @@ logger = logging.getLogger(__name__)
 
 openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
 
+
+def _safe_error_summary(exc: Exception, model: str) -> str:
+    """Allowlisted fields only: no prompts, documents, headers, keys or raw bodies."""
+    parts = [f"type={type(exc).__name__}", f"model={model}"]
+    status = getattr(exc, "status_code", None)
+    if status is not None:
+        parts.append(f"status={status}")
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        err = body.get("error", body)
+        if isinstance(err, dict):
+            for key in ("code", "status", "type"):
+                val = err.get(key)
+                if isinstance(val, (str, int)) and len(str(val)) <= 60:
+                    parts.append(f"{key}={val}")
+    elif body is None:
+        parts.append("body=none")
+    else:
+        parts.append(f"body_type={type(body).__name__}")
+    response = getattr(exc, "response", None)
+    request = getattr(response, "request", None)
+    url = getattr(request, "url", None)
+    if url is not None:
+        parts.append(f"host={url.host}")
+        parts.append(f"path={url.path}")
+    return " ".join(parts)
+
 SYSTEM_PROMPT = """You are an expert enterprise support agent. Your job is to help customers 
 by answering questions using the provided context from our knowledge base.
 
@@ -139,7 +166,7 @@ Please answer the customer's question using ONLY the context above. Include sour
                 },
             }
         except Exception as e:
-            logger.error(f"Generation error: {e}")
+            logger.error(f"Generation error: {_safe_error_summary(e, self.model)}")
             return {
                 "response": "I apologize, but I'm experiencing technical difficulties. Please try again or contact a human agent.",
                 "citations": [],
@@ -191,7 +218,7 @@ Please answer the customer's question using ONLY the context above. Include sour
             yield f"data: {json.dumps({'event': 'done', 'citations': sources})}\n\n"
 
         except Exception as e:
-            logger.error(f"Streaming error: {e}")
+            logger.error(f"Streaming error: {_safe_error_summary(e, self.model)}")
             yield f"data: {json.dumps({'event': 'error', 'message': 'An error occurred during streaming.'})}\n\n"
 
     def calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
